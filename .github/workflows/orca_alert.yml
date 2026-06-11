@@ -1,0 +1,47 @@
+name: Orca Whirlpool Alert
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes
+  workflow_dispatch:          # allow manual run from GitHub UI
+
+permissions:
+  contents: write             # needed to commit state.json
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4        # kill if it hangs (keeps within 5-min window)
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run alert bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python orca_alert.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          if git diff --staged --quiet; then
+            echo "state.json unchanged, skipping commit"
+          else
+            git commit -m "chore: update state [skip ci]"
+            git pull --rebase origin main
+            git push
+          fi
