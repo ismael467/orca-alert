@@ -30,7 +30,7 @@ import requests
 
 TELEGRAM_TOKEN  = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-STATE_FILE      = Path("state.json")
+STATE_FILE      = Path("state_monitor.json")
 GRAPH_API_KEY   = os.environ.get("GRAPH_API_KEY", "")  # enables decentralised Graph
 
 DECLINE_TVL_PCT = 50
