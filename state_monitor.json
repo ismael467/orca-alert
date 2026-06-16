@@ -4,16 +4,16 @@
       "bsc_0x366bb6c67fab6eb056c307c51ea2338180bffcb7": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 17087.7705,
-        "last_vol_24h": 158769.881843417,
+        "last_tvl": 17685.6963,
+        "last_vol_24h": 186673.953581676,
         "alerted_decline": false,
         "name": "SPCXB / USDC 1%"
       },
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 25417.0624,
-        "last_vol_24h": 476554.680050961,
+        "last_tvl": 25465.0748,
+        "last_vol_24h": 425710.358634675,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
@@ -32,9 +32,17 @@
         "last_vol_24h": 398157.673167561,
         "alerted_decline": false,
         "name": "4 / USDT 0.25%"
+      },
+      "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
+        "first_seen": "2026-06-16T22:20:58.911355+00:00",
+        "last_alert": "2026-06-16T22:20:58.911355+00:00",
+        "last_tvl": 49963.4714,
+        "last_vol_24h": 154248.491321414,
+        "alerted_decline": false,
+        "name": "USELESS / WBNB 0.25%"
       }
     },
-    "qualifying_count": 2
+    "qualifying_count": 3
   },
   "orca": {
     "qualifying_count": 0,
@@ -46,5 +54,5 @@
   "uniswap_base": {
     "qualifying_count": 0
   },
-  "last_run": "2026-06-16T20:47:47.467079+00:00"
+  "last_run": "2026-06-16T22:20:58.911355+00:00"
 }
