@@ -12,8 +12,8 @@
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 24926.8781,
-        "last_vol_24h": 490283.694526856,
+        "last_tvl": 25417.0624,
+        "last_vol_24h": 476554.680050961,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
@@ -24,9 +24,17 @@
         "last_vol_24h": 117423.761843155,
         "alerted_decline": false,
         "name": "我踏马来了 / USDT 1%"
+      },
+      "bsc_0xee04b2a82bab9efefcd626f5d66f51cc2b6fa12a": {
+        "first_seen": "2026-06-16T20:47:47.467079+00:00",
+        "last_alert": "2026-06-16T20:47:47.467079+00:00",
+        "last_tvl": 89369.4536,
+        "last_vol_24h": 398157.673167561,
+        "alerted_decline": false,
+        "name": "4 / USDT 0.25%"
       }
     },
-    "qualifying_count": 3
+    "qualifying_count": 2
   },
   "orca": {
     "qualifying_count": 0,
@@ -38,5 +46,5 @@
   "uniswap_base": {
     "qualifying_count": 0
   },
-  "last_run": "2026-06-16T20:09:19.015700+00:00"
+  "last_run": "2026-06-16T20:47:47.467079+00:00"
 }
