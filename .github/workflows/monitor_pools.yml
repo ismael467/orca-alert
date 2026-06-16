@@ -30,7 +30,7 @@ jobs:
       - name: Run monitor
         env:
           TELEGRAM_TOKEN:  ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
           GRAPH_API_KEY:   ${{ secrets.GRAPH_API_KEY }}   # optional: enables The Graph decentralised network
         run: python scripts/monitor_pools.py
 

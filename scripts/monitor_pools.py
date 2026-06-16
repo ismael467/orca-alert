@@ -29,7 +29,7 @@ import requests
 # ─────────────────────────────────────────────────────────────────────────────
 
 TELEGRAM_TOKEN  = os.environ["TELEGRAM_TOKEN"]
-TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT"]
 STATE_FILE      = Path("state_monitor.json")
 GRAPH_API_KEY   = os.environ.get("GRAPH_API_KEY", "")  # enables decentralised Graph
 
