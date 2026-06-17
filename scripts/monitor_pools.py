@@ -4,15 +4,14 @@
 Sources:
   PancakeSwap V3 BSC  — GeckoTerminal (original filters, logic unchanged)
   Orca Whirlpools     — api.mainnet.orca.so
-  Uniswap V3 Arbitrum — The Graph
-  Uniswap V3 Base     — The Graph
+  Uniswap V3 Arbitrum — GeckoTerminal
+  Uniswap V3 Base     — GeckoTerminal
 
 New-source filters (Orca + Uniswap only):
   TVL ≥$200K, Vol ≥$100K/day, APR 200–3000%,
-  price Δ24h ∈ [-10%, +20%], vol spike ≥2× 6-day avg, top-20 tokens only.
+  price Δ24h ∈ [-10%, +20%], vol spike ≥2× 6-day avg, top-100 tokens only.
 
-State is namespaced by DEX in state.json and committed with [skip ci].
-Optional: set GRAPH_API_KEY env var to use The Graph decentralised network.
+State is namespaced by DEX in state_monitor.json and committed with [skip ci].
 """
 
 import json
@@ -31,7 +30,6 @@ import requests
 TELEGRAM_TOKEN  = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT"]
 STATE_FILE      = Path("state_monitor.json")
-GRAPH_API_KEY   = os.environ.get("GRAPH_API_KEY", "")  # enables decentralised Graph
 
 DECLINE_TVL_PCT = 50
 DECLINE_VOL_PCT = 60
@@ -71,52 +69,23 @@ TOP_N_COINS    = 100
 ORCA_API = "https://api.mainnet.orca.so/v1/whirlpool/list"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Uniswap V3 — The Graph
+# Uniswap V3 — GeckoTerminal
 # ─────────────────────────────────────────────────────────────────────────────
-
-_GRAPH_GATEWAY = "https://gateway.thegraph.com/api/{key}/subgraphs/id/{id}"
-_GRAPH_HOSTED  = "https://api.thegraph.com/subgraphs/name/{name}"
 
 UNISWAP_NETWORKS: dict[str, dict] = {
     "arbitrum": {
-        "hosted_name":  "uniswap/uniswap-v3-arbitrum",
-        "subgraph_id":  "FbCGRftH4a3yZugY7TnbYgPJVEv2LvMT6oF1fxPe9aEM",
-        "app_url":      "https://app.uniswap.org/explore/pools/arbitrum/{addr}",
-        "label":        "UNISWAP V3 ARBITRUM",
+        "gecko_network": "arbitrum",
+        "gecko_dex":     "uniswap-v3-arbitrum",
+        "app_url":       "https://app.uniswap.org/explore/pools/arbitrum/{addr}",
+        "label":         "UNISWAP V3 ARBITRUM",
     },
     "base": {
-        "hosted_name":  "uniswap/uniswap-v3-base",
-        "subgraph_id":  "HMoE6nHMfBpX4nMFmF5mHEvqFd5BfrBJPnHtJZJFxzs5",
-        "app_url":      "https://app.uniswap.org/explore/pools/base/{addr}",
-        "label":        "UNISWAP V3 BASE",
+        "gecko_network": "base",
+        "gecko_dex":     "uniswap-v3-base",
+        "app_url":       "https://app.uniswap.org/explore/pools/base/{addr}",
+        "label":         "UNISWAP V3 BASE",
     },
 }
-
-# Fetch 200 pools sorted by TVL; poolDayData gives 8 days to compute spike + price Δ
-_POOL_QUERY = """
-{
-  pools(
-    first: 200
-    orderBy: totalValueLockedUSD
-    orderDirection: desc
-    where: { totalValueLockedUSD_gte: "200000" }
-  ) {
-    id
-    token0 { id symbol name }
-    token1 { id symbol name }
-    feeTier
-    totalValueLockedUSD
-    poolDayData(first: 8 orderBy: date orderDirection: desc) {
-      date
-      volumeUSD
-      feesUSD
-      tvlUSD
-      open
-      close
-    }
-  }
-}
-"""
 
 # Symbols we treat as stablecoins (skip for price-Δ filter)
 STABLE_SYMBOLS = {
@@ -201,16 +170,6 @@ def fetch_top_coins(n: int = TOP_N_COINS) -> dict[str, dict]:
     return {}
 
 
-def _symbol_to_change(top_coins: dict[str, dict]) -> dict[str, float]:
-    """symbol → 24h price change (%), for Uniswap token matching."""
-    out: dict[str, float] = {}
-    for info in top_coins.values():
-        sym = info["symbol"]
-        if info["change_24h"] is not None and sym not in STABLE_SYMBOLS:
-            out[sym] = info["change_24h"]
-    return out
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # New-source shared filter + alert builders
 # ─────────────────────────────────────────────────────────────────────────────
@@ -225,7 +184,8 @@ def passes_new_filters(m: dict) -> bool:
     pc = m.get("price_change_24h")
     if pc is not None and not (NEW_PRICE_MIN <= pc <= NEW_PRICE_MAX):
         return False
-    if m.get("volume_spike", 0.0) < NEW_SPIKE_MIN:
+    spike = m.get("volume_spike")
+    if spike is not None and spike < NEW_SPIKE_MIN:
         return False
     if not m.get("in_top100"):
         return False
@@ -581,106 +541,125 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Uniswap V3 via The Graph (Arbitrum + Base)
+# Uniswap V3 via GeckoTerminal (Arbitrum + Base)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _graphql_endpoint(chain: str) -> str:
-    cfg = UNISWAP_NETWORKS[chain]
-    if GRAPH_API_KEY:
-        return _GRAPH_GATEWAY.format(key=GRAPH_API_KEY, id=cfg["subgraph_id"])
-    return _GRAPH_HOSTED.format(name=cfg["hosted_name"])
+def _fetch_uniswap_pools(chain: str, max_pages: int = 15) -> tuple[list[dict], dict[str, str]]:
+    """Fetch Uniswap V3 pools for a given chain from GeckoTerminal.
 
+    Returns (pools, token_cg_map).
+    """
+    cfg     = UNISWAP_NETWORKS[chain]
+    network = cfg["gecko_network"]
+    dex     = cfg["gecko_dex"]
+    label   = cfg["label"]
 
-def _graphql_query(url: str, query: str) -> dict | None:
-    for attempt in range(3):
-        try:
-            resp = requests.post(url, json={"query": query}, timeout=30)
-            if resp.status_code == 200:
-                payload = resp.json()
-                if "errors" in payload:
-                    print(f"[Graph] GraphQL errors: {payload['errors'][:1]}")
-                    return None
-                return payload.get("data")
-            print(f"[Graph] HTTP {resp.status_code}: {resp.text[:200]}")
-        except Exception as exc:
-            print(f"[Graph] Attempt {attempt + 1}: {exc}")
-        if attempt < 2:
-            time.sleep(2 ** attempt)
-    return None
+    pools: list[dict] = []
+    token_cg_map: dict[str, str] = {}
+
+    for page in range(1, max_pages + 1):
+        url = (
+            f"{GECKO_BASE}/networks/{network}/dexes/{dex}/pools"
+            f"?sort=h24_volume_usd_desc&page={page}&include=base_token,quote_token"
+        )
+        resp = None
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, headers=GECKO_HEADERS, timeout=20)
+            except Exception as exc:
+                print(f"[{label}] Network error page {page} attempt {attempt+1}: {exc}")
+                time.sleep(2 ** attempt)
+                continue
+            if resp.status_code == 429:
+                wait = int(resp.headers.get("Retry-After", 10))
+                print(f"[{label}] Rate limited, waiting {wait}s…")
+                time.sleep(wait)
+                continue
+            if resp.status_code != 200:
+                print(f"[{label}] HTTP {resp.status_code} on page {page}")
+                resp = None
+            break
+
+        if resp is None:
+            break
+
+        body = resp.json()
+        data = body.get("data", [])
+        if not data:
+            break
+
+        pools.extend(data)
+
+        for item in body.get("included", []):
+            if item.get("type") == "token":
+                cg_id = item.get("attributes", {}).get("coingecko_coin_id") or ""
+                if cg_id:
+                    token_cg_map[item["id"]] = cg_id
+
+        last_vol = float(data[-1]["attributes"]["volume_usd"].get("h24") or 0)
+        if last_vol < NEW_MIN_VOL:
+            break
+
+        time.sleep(0.4)
+
+    return pools, token_cg_map
 
 
 def _compute_uniswap_metrics(
     pool: dict,
     chain: str,
     top_coins: dict[str, dict],
-    sym_change: dict[str, float],
+    token_cg_map: dict[str, str],
 ) -> dict | None:
-    tvl = float(pool.get("totalValueLockedUSD") or 0)
+    attr = pool["attributes"]
+    name = attr.get("name", "")
+
+    fee_tier = _parse_fee_tier(name)
+    if fee_tier == 0.0:
+        return None
+
+    vol_24h = float(attr["volume_usd"].get("h24") or 0)
+    vol_h1  = float(attr["volume_usd"].get("h1")  or 0)
+    tvl     = float(attr.get("reserve_in_usd") or 0)
+
     if tvl <= 0:
         return None
 
-    day_data = pool.get("poolDayData") or []
-    if not day_data:
+    vol_for_apr = max(vol_24h, vol_h1 * 24)
+    if vol_for_apr <= 0:
         return None
 
-    # day_data[0] = most recent UTC day (may be partially filled).
-    # Use [1] as the last *complete* day; fall back to [0] if only one entry.
-    ri = 1 if len(day_data) > 1 else 0
-    vol_24h  = float(day_data[ri].get("volumeUSD") or 0)
-    fees_24h = float(day_data[ri].get("feesUSD")   or 0)
-    tvl_snap = float(day_data[ri].get("tvlUSD")    or tvl)
+    fees_24h = vol_for_apr * fee_tier
+    apr      = (fees_24h / tvl) * 365 * 100
 
-    if vol_24h <= 0:
-        return None
+    # Price Δ24h directly from GeckoTerminal
+    pc_raw = attr.get("price_change_percentage", {}).get("h24")
+    price_change_24h: float | None = float(pc_raw) if pc_raw is not None else None
 
-    apr = (fees_24h / tvl_snap) * 365 * 100 if tvl_snap > 0 else 0.0
-
-    # Volume spike: last complete day vs avg of prior 6 complete days
-    prior = day_data[ri + 1 : ri + 7]
-    if len(prior) >= 2:
-        prior_vols  = [float(d.get("volumeUSD") or 0) for d in prior]
-        six_day_avg = sum(prior_vols) / len(prior_vols)
-        vol_spike   = vol_24h / six_day_avg if six_day_avg > 0 else 0.0
-    else:
-        vol_spike = 0.0  # insufficient history → fails spike filter
-
-    t0   = pool.get("token0") or {}
-    t1   = pool.get("token1") or {}
-    sym0 = t0.get("symbol", "").lower()
-    sym1 = t1.get("symbol", "").lower()
-
-    # Price Δ24h: prefer CoinGecko (USD-based); fall back to pool open/close ratio
-    price_change_24h: float | None = None
-    if sym0 in sym_change and sym0 not in STABLE_SYMBOLS:
-        price_change_24h = sym_change[sym0]
-    elif sym1 in sym_change and sym1 not in STABLE_SYMBOLS:
-        price_change_24h = sym_change[sym1]
-    elif len(day_data) > ri + 1:
-        curr_close = float(day_data[ri].get("close")     or 0)
-        prev_close = float(day_data[ri + 1].get("close") or 0)
-        if curr_close > 0 and prev_close > 0:
-            price_change_24h = (curr_close - prev_close) / prev_close * 100
-
-    top_syms = {info["symbol"] for info in top_coins.values()}
-    in_top100 = sym0 in top_syms or sym1 in top_syms
-
-    fee_tier_bps = int(pool.get("feeTier") or 0)
-    fee_pct_str  = f"{fee_tier_bps / 10_000:.2f}%"
-    name = f"{t0.get('symbol','?')}/{t1.get('symbol','?')} ({fee_pct_str})"
+    # Top-100 via CoinGecko IDs from included token data
+    rels     = pool.get("relationships", {})
+    base_id  = rels.get("base_token",  {}).get("data", {}).get("id", "")
+    quote_id = rels.get("quote_token", {}).get("data", {}).get("id", "")
+    base_cg  = token_cg_map.get(base_id,  "")
+    quote_cg = token_cg_map.get(quote_id, "")
+    in_top100 = bool(
+        (base_cg  and base_cg  in top_coins) or
+        (quote_cg and quote_cg in top_coins)
+    )
 
     cfg      = UNISWAP_NETWORKS[chain]
-    pool_url = cfg["app_url"].format(addr=pool["id"])
+    pool_url = cfg["app_url"].format(addr=attr["address"])
 
     return {
-        "address":          pool["id"],
+        "address":          attr["address"],
         "name":             name,
         "tvl":              tvl,
         "vol_24h":          vol_24h,
         "fees_24h":         fees_24h,
         "apr":              apr,
-        "volume_spike":     vol_spike,
+        "volume_spike":     None,   # GeckoTerminal has no weekly vol endpoint per pool
         "price_change_24h": price_change_24h,
-        "in_top100":         in_top100,
+        "in_top100":        in_top100,
         "badge":            "🟢" if in_top100 else "🟡",
         "pool_url":         pool_url,
     }
@@ -691,24 +670,16 @@ def run_uniswap(
     ns_state: dict,
     now_iso: str,
     top_coins: dict[str, dict],
-    sym_change: dict[str, float],
 ) -> int:
     label = UNISWAP_NETWORKS[chain]["label"]
-    url   = _graphql_endpoint(chain)
+    print(f"[{label}] Fetching pools from GeckoTerminal…")
 
-    print(f"[{label}] Querying The Graph ({url[:50]}…)")
-    data = _graphql_query(url, _POOL_QUERY)
-    if not data:
-        print(f"[{label}] No data — skipping. (Set GRAPH_API_KEY if hosted is deprecated.)")
-        ns_state["qualifying_count"] = 0
-        return 0
-
-    raw_pools = data.get("pools") or []
-    print(f"[{label}] Got {len(raw_pools)} pools")
+    raw_pools, token_cg_map = _fetch_uniswap_pools(chain)
+    print(f"[{label}] Fetched {len(raw_pools)} pools, {len(token_cg_map)} token CG IDs")
 
     qualifying: list[dict] = []
     for pool in raw_pools:
-        m = _compute_uniswap_metrics(pool, chain, top_coins, sym_change)
+        m = _compute_uniswap_metrics(pool, chain, top_coins, token_cg_map)
         if m and passes_new_filters(m):
             qualifying.append(m)
 
@@ -727,16 +698,15 @@ def main() -> None:
     state   = load_state()
     total   = 0
 
-    # Fetch CoinGecko top-20 once; shared by Orca + Uniswap
+    # Fetch CoinGecko top-N once; shared by Orca + Uniswap
     print(f"[CoinGecko] Fetching top-{TOP_N_COINS} coins…")
-    top_coins  = fetch_top_coins(TOP_N_COINS)
-    sym_change = _symbol_to_change(top_coins)
+    top_coins = fetch_top_coins(TOP_N_COINS)
     print(f"[CoinGecko] Loaded {len(top_coins)} coins")
 
     total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso)
     total += run_orca(state.setdefault("orca", {}), now_iso, top_coins)
-    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, sym_change)
-    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, sym_change)
+    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins)
+    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins)
 
     state["last_run"] = now_iso
     save_state(state)
