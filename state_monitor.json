@@ -4,24 +4,24 @@
       "bsc_0x366bb6c67fab6eb056c307c51ea2338180bffcb7": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 23322.0922,
-        "last_vol_24h": 209040.428578969,
+        "last_tvl": 38230.7014,
+        "last_vol_24h": 148772.138062146,
         "alerted_decline": false,
         "name": "SPCXB / USDC 1%"
       },
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 24498.6761,
-        "last_vol_24h": 371141.947850784,
+        "last_tvl": 25444.3881,
+        "last_vol_24h": 230476.126690386,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
       "bsc_0xb6bf78211bec35385dc663d37ea41118205c1303": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 71969.7563,
-        "last_vol_24h": 117423.761843155,
+        "last_tvl": 70268.3245,
+        "last_vol_24h": 129009.138731746,
         "alerted_decline": false,
         "name": "我踏马来了 / USDT 1%"
       },
@@ -36,8 +36,8 @@
       "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
         "first_seen": "2026-06-16T22:20:58.911355+00:00",
         "last_alert": "2026-06-16T22:20:58.911355+00:00",
-        "last_tvl": 51063.5561,
-        "last_vol_24h": 370873.47764866,
+        "last_tvl": 51071.4738,
+        "last_vol_24h": 370991.786513726,
         "alerted_decline": false,
         "name": "USELESS / WBNB 0.25%"
       },
@@ -74,7 +74,7 @@
         "name": "ASTER / WBNB 0.05%"
       }
     },
-    "qualifying_count": 1
+    "qualifying_count": 4
   },
   "orca": {
     "qualifying_count": 3,
@@ -103,12 +103,12 @@
     }
   },
   "uniswap_arbitrum": {
-    "qualifying_count": 3,
+    "qualifying_count": 2,
     "alerted_pools": {
       "0xc24f7d8e51a64dc1238880bd00bb961d54cbeb29": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 243723.1217,
-        "last_vol_24h": 534716.813931606,
+        "last_tvl": 243000.6579,
+        "last_vol_24h": 531057.886343171,
         "alerted_decline": false,
         "name": "UNI / WETH 0.3%"
       },
@@ -121,20 +121,20 @@
       },
       "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 352217.9187,
-        "last_vol_24h": 670453.834529216,
+        "last_tvl": 350834.5876,
+        "last_vol_24h": 687338.33738788,
         "alerted_decline": false,
         "name": "ARB / USDT 0.3%"
       }
     }
   },
   "uniswap_base": {
-    "qualifying_count": 3,
+    "qualifying_count": 1,
     "alerted_pools": {
       "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 202330.6324,
-        "last_vol_24h": 422918.442256171,
+        "last_tvl": 210006.5257,
+        "last_vol_24h": 426889.119013035,
         "alerted_decline": false,
         "name": "USDC / VVV 0.3%"
       },
@@ -154,9 +154,9 @@
       }
     }
   },
-  "last_run": "2026-06-17T16:27:04.219630+00:00",
+  "last_run": "2026-06-17T17:37:47.550698+00:00",
   "uniswap_ethereum": {
-    "qualifying_count": 1,
+    "qualifying_count": 0,
     "alerted_pools": {
       "0xf763bb342eb3d23c02ccb86312422fe0c1c17e94": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
@@ -166,5 +166,8 @@
         "name": "wTAO / USDC 1%"
       }
     }
+  },
+  "projectx": {
+    "qualifying_count": 0
   }
 }
