@@ -76,13 +76,13 @@ ORCA_API = "https://api.mainnet.orca.so/v1/whirlpool/list"
 UNISWAP_NETWORKS: dict[str, dict] = {
     "ethereum": {
         "gecko_network": "eth",
-        "gecko_dex":     "uniswap-v3",
+        "gecko_dex":     "uniswap_v3",
         "app_url":       "https://app.uniswap.org/explore/pools/ethereum/{addr}",
         "label":         "UNISWAP V3 ETHEREUM",
     },
     "arbitrum": {
         "gecko_network": "arbitrum",
-        "gecko_dex":     "uniswap-v3-arbitrum",
+        "gecko_dex":     "uniswap_v3_arbitrum",
         "app_url":       "https://app.uniswap.org/explore/pools/arbitrum/{addr}",
         "label":         "UNISWAP V3 ARBITRUM",
     },
@@ -201,7 +201,7 @@ def passes_new_filters(m: dict) -> bool:
 
 def _build_new_alert(m: dict, label: str) -> str:
     pc    = m.get("price_change_24h")
-    spike = m.get("volume_spike", 0.0)
+    spike = m.get("volume_spike") or 0.0
     pc_line = f"Precio Δ24h: {pc:+.1f}%\n" if pc is not None else ""
     body = (
         f"Pool:        {m['name']}\n"
