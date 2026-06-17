@@ -2,13 +2,14 @@
 """Multi-DEX high-APR pool monitor.
 
 Sources:
-  PancakeSwap V3 BSC   — GeckoTerminal (original filters, logic unchanged)
-  Orca Whirlpools      — api.mainnet.orca.so
-  Uniswap V3 Ethereum  — GeckoTerminal
-  Uniswap V3 Arbitrum  — GeckoTerminal
-  Uniswap V3 Base      — GeckoTerminal
+  PancakeSwap V3 BSC      — GeckoTerminal (original filters, logic unchanged)
+  Orca Whirlpools         — api.mainnet.orca.so
+  Uniswap V3 Ethereum     — GeckoTerminal
+  Uniswap V3 Arbitrum     — GeckoTerminal
+  Uniswap V3 Base         — GeckoTerminal
+  ProjectX HyperEVM       — Goldsky subgraph (Uniswap V3 schema)
 
-New-source filters (Orca + Uniswap only):
+New-source filters (Orca + Uniswap + ProjectX):
   TVL ≥$200K, Vol ≥$100K/day, APR 200–3000%,
   price Δ24h ∈ [-10%, +20%], vol spike ≥2× 6-day avg, top-100 tokens only.
 
@@ -93,6 +94,33 @@ UNISWAP_NETWORKS: dict[str, dict] = {
         "label":         "UNISWAP V3 BASE",
     },
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ProjectX — HyperEVM (Goldsky / Uniswap V3 schema)
+# ─────────────────────────────────────────────────────────────────────────────
+
+PROJECTX_GRAPHQL = (
+    "https://api.goldsky.com/api/public/project_cmbbm2iwckb1b01t39xed236t"
+    "/subgraphs/uniswap-v3-hyperevm-position/prod/gn"
+)
+PROJECTX_APP_URL = "https://app.projectx.finance/#/pool/{addr}"
+
+_PROJECTX_QUERY = """
+{
+  pools(first: 1000, orderBy: totalValueLockedUSD, orderDirection: desc) {
+    id
+    feeTier
+    totalValueLockedUSD
+    token0 { symbol }
+    token1 { symbol }
+    poolDayData(first: 8, orderBy: date, orderDirection: desc) {
+      volumeUSD
+      feesUSD
+      tvlUSD
+    }
+  }
+}
+"""
 
 # Symbols we treat as stablecoins (skip for price-Δ filter)
 STABLE_SYMBOLS = {
@@ -696,6 +724,111 @@ def run_uniswap(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# ProjectX HyperEVM — Goldsky subgraph
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _graphql_post(url: str, query: str) -> dict | None:
+    for attempt in range(3):
+        try:
+            resp = requests.post(url, json={"query": query}, timeout=30)
+            if resp.status_code == 200:
+                payload = resp.json()
+                if "errors" in payload:
+                    print(f"[GraphQL] errors: {payload['errors'][:1]}")
+                    return None
+                return payload.get("data")
+            print(f"[GraphQL] HTTP {resp.status_code}")
+        except Exception as exc:
+            print(f"[GraphQL] attempt {attempt + 1}: {exc}")
+        if attempt < 2:
+            time.sleep(2 ** attempt)
+    return None
+
+
+def _compute_projectx_metrics(
+    pool: dict,
+    top_coins: dict[str, dict],
+) -> dict | None:
+    tvl = float(pool.get("totalValueLockedUSD") or 0)
+    if tvl <= 0:
+        return None
+
+    day_data = pool.get("poolDayData") or []
+    if not day_data:
+        return None
+
+    # day_data[0] = most recent (may be partial); use [1] as last complete day
+    ri = 1 if len(day_data) > 1 else 0
+    vol_24h  = float(day_data[ri].get("volumeUSD") or 0)
+    fees_24h = float(day_data[ri].get("feesUSD")   or 0)
+    tvl_snap = float(day_data[ri].get("tvlUSD")    or tvl)
+
+    if vol_24h <= 0:
+        return None
+
+    apr = (fees_24h / tvl_snap) * 365 * 100 if tvl_snap > 0 else 0.0
+
+    # Volume spike: last complete day vs avg of prior 6 complete days
+    prior = day_data[ri + 1: ri + 7]
+    if len(prior) >= 2:
+        prior_vols  = [float(d.get("volumeUSD") or 0) for d in prior]
+        six_day_avg = sum(prior_vols) / len(prior_vols)
+        vol_spike   = vol_24h / six_day_avg if six_day_avg > 0 else 0.0
+    else:
+        vol_spike = None  # insufficient history → spike check skipped
+
+    t0   = pool.get("token0") or {}
+    t1   = pool.get("token1") or {}
+    sym0 = t0.get("symbol", "?")
+    sym1 = t1.get("symbol", "?")
+
+    top_syms  = {info["symbol"].lower() for info in top_coins.values()}
+    in_top100 = sym0.lower() in top_syms or sym1.lower() in top_syms
+
+    fee_bps     = int(pool.get("feeTier") or 0)
+    fee_pct_str = f"{fee_bps / 10_000:.2f}%"
+    name        = f"{sym0}/{sym1} ({fee_pct_str})"
+
+    return {
+        "address":          pool["id"],
+        "name":             name,
+        "tvl":              tvl,
+        "vol_24h":          vol_24h,
+        "fees_24h":         fees_24h,
+        "apr":              apr,
+        "volume_spike":     vol_spike,
+        "price_change_24h": None,
+        "in_top100":        in_top100,
+        "badge":            "🟢" if in_top100 else "🟡",
+        "pool_url":         PROJECTX_APP_URL.format(addr=pool["id"]),
+    }
+
+
+def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
+    label = "PROJECTX HYPERLIQUID"
+    print(f"[{label}] Querying Goldsky subgraph…")
+    data = _graphql_post(PROJECTX_GRAPHQL, _PROJECTX_QUERY)
+    if not data:
+        print(f"[{label}] No data — skipping.")
+        ns_state["qualifying_count"] = 0
+        return 0
+
+    raw_pools = data.get("pools") or []
+    print(f"[{label}] Got {len(raw_pools)} pools")
+
+    qualifying: list[dict] = []
+    for pool in raw_pools:
+        m = _compute_projectx_metrics(pool, top_coins)
+        if m and passes_new_filters(m):
+            qualifying.append(m)
+
+    qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
+    print(f"[{label}] {len(qualifying)} pools pass filters")
+    ns_state["qualifying_count"] = len(qualifying)
+    return _process_new_source(qualifying, label, ns_state, now_iso)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -718,6 +851,8 @@ def main() -> None:
     total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins)
     time.sleep(3)
     total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins)
+    time.sleep(3)
+    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins)
 
     state["last_run"] = now_iso
     save_state(state)
