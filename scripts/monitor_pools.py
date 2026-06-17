@@ -2,10 +2,11 @@
 """Multi-DEX high-APR pool monitor.
 
 Sources:
-  PancakeSwap V3 BSC  — GeckoTerminal (original filters, logic unchanged)
-  Orca Whirlpools     — api.mainnet.orca.so
-  Uniswap V3 Arbitrum — GeckoTerminal
-  Uniswap V3 Base     — GeckoTerminal
+  PancakeSwap V3 BSC   — GeckoTerminal (original filters, logic unchanged)
+  Orca Whirlpools      — api.mainnet.orca.so
+  Uniswap V3 Ethereum  — GeckoTerminal
+  Uniswap V3 Arbitrum  — GeckoTerminal
+  Uniswap V3 Base      — GeckoTerminal
 
 New-source filters (Orca + Uniswap only):
   TVL ≥$200K, Vol ≥$100K/day, APR 200–3000%,
@@ -73,6 +74,12 @@ ORCA_API = "https://api.mainnet.orca.so/v1/whirlpool/list"
 # ─────────────────────────────────────────────────────────────────────────────
 
 UNISWAP_NETWORKS: dict[str, dict] = {
+    "ethereum": {
+        "gecko_network": "eth",
+        "gecko_dex":     "uniswap-v3",
+        "app_url":       "https://app.uniswap.org/explore/pools/ethereum/{addr}",
+        "label":         "UNISWAP V3 ETHEREUM",
+    },
     "arbitrum": {
         "gecko_network": "arbitrum",
         "gecko_dex":     "uniswap-v3-arbitrum",
@@ -705,6 +712,7 @@ def main() -> None:
 
     total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso)
     total += run_orca(state.setdefault("orca", {}), now_iso, top_coins)
+    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins)
     total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins)
     total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins)
 
