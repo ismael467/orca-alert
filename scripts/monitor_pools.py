@@ -187,6 +187,85 @@ def fmt_money(value: float) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Suggested LP range helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+_RANGE_LOW_VOL = {"btc", "wbtc", "btcb", "eth", "weth"}
+_RANGE_MED_VOL = {"sol", "wsol", "bnb", "wbnb", "avax", "wavax"}
+
+
+def _range_fallback_pct(sym_a: str, sym_b: str) -> float:
+    syms = {sym_a.lower(), sym_b.lower()}
+    if syms & STABLE_SYMBOLS:
+        return 10.0
+    if syms & _RANGE_LOW_VOL:
+        return 12.0
+    if syms & _RANGE_MED_VOL:
+        return 15.0
+    return 20.0
+
+
+def _fmt_price(p: float) -> str:
+    if p >= 1_000:
+        return f"${p:,.0f}"
+    if p >= 1.0:
+        return f"${p:.2f}"
+    if p >= 0.01:
+        return f"${p:.4f}"
+    if p >= 0.0001:
+        return f"${p:.6f}"
+    return f"${p:.2e}"
+
+
+def _avg_spike_days(day_volumes: list[float]) -> float | None:
+    if len(day_volumes) < 3:
+        return None
+    sorted_vols = sorted(day_volumes)
+    median_vol  = sorted_vols[len(sorted_vols) // 2]
+    if median_vol <= 0:
+        return None
+    threshold   = 2.0 * median_vol
+    runs, run   = [], 0
+    for v in day_volumes:
+        if v >= threshold:
+            run += 1
+        elif run:
+            runs.append(run)
+            run = 0
+    if run:
+        runs.append(run)
+    return (sum(runs) / len(runs)) if runs else None
+
+
+def _range_line(
+    sym_a: str,
+    sym_b: str,
+    price_base: float | None,
+    price_change_24h: float | None,
+    day_volumes: list[float] | None = None,
+) -> str:
+    base_pct = _range_fallback_pct(sym_a, sym_b)
+    low_pct  = base_pct
+    high_pct = base_pct
+    if price_change_24h is not None and abs(price_change_24h) > 5.0:
+        if price_change_24h > 0:
+            high_pct += 5.0
+        else:
+            low_pct  += 5.0
+    spike_dur = _avg_spike_days(day_volumes) if day_volumes else None
+    dur_str   = f"{spike_dur:.1f} días" if spike_dur is not None else "N/D"
+    if price_base and price_base > 0:
+        low  = price_base * (1 - low_pct  / 100)
+        high = price_base * (1 + high_pct / 100)
+        pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
+        range_str = f"{_fmt_price(low)} — {_fmt_price(high)} ({pct_str})"
+    else:
+        pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
+        range_str = pct_str
+    return f"📐 Rango sugerido: {range_str} | ⏱ Duración media spike: {dur_str}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CoinGecko top-N (fetched once per run, shared by all new sources)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -251,9 +330,17 @@ def _build_new_alert(m: dict, label: str) -> str:
         f"{pc_line}"
     ).rstrip()
     title = m.get("alert_title") or f"🚨 NUEVA OPORTUNIDAD — {label} {m['badge']}"
+    rng   = _range_line(
+        m.get("sym_a", "?"),
+        m.get("sym_b", "?"),
+        m.get("price_base"),
+        pc,
+        m.get("day_volumes"),
+    )
     return (
         f"{title}\n\n"
         f"<pre>{body}</pre>\n\n"
+        f"{rng}\n\n"
         f"🔗 {m['pool_url']}"
     )
 
@@ -392,6 +479,10 @@ def _compute_pancake_metrics(pool: dict) -> dict | None:
     is_wbnb  = WBNB_ADDR in (base_id + quote_id)
     price_chg_h24 = float(attr.get("price_change_percentage", {}).get("h24") or 0)
     price_chg_h1  = float(attr.get("price_change_percentage", {}).get("h1")  or 0)
+    _sm = re.match(r"^(.+?)\s*/\s*(.+?)\s+[\d.]+%", name)
+    sym_a      = _sm.group(1).strip() if _sm else "?"
+    sym_b      = _sm.group(2).strip() if _sm else "?"
+    price_base = float(attr.get("base_token_price_usd") or 0) or None
     return {
         "pool_id":       pool["id"],
         "address":       attr["address"],
@@ -406,6 +497,9 @@ def _compute_pancake_metrics(pool: dict) -> dict | None:
         "is_wbnb":       is_wbnb,
         "price_chg_h24": price_chg_h24,
         "price_chg_h1":  price_chg_h1,
+        "sym_a":         sym_a,
+        "sym_b":         sym_b,
+        "price_base":    price_base,
     }
 
 
@@ -421,6 +515,12 @@ def _passes_pancake_filters(m: dict) -> bool:
 
 def _build_pancake_alert(m: dict) -> str:
     btcb_badge = " 🔥 BTCB" if m["is_btcb"] else ""
+    rng = _range_line(
+        m.get("sym_a", "?"),
+        m.get("sym_b", "?"),
+        m.get("price_base"),
+        m.get("price_chg_h24"),
+    )
     return (
         f"🚨 <b>NUEVA OPORTUNIDAD{btcb_badge}</b>\n"
         f"<b>Pool:</b> {m['name']}\n"
@@ -431,6 +531,7 @@ def _build_pancake_alert(m: dict) -> str:
         f"<b>Fee tier:</b> {m['fee_tier']*100:.2f}%\n"
         f"<b>Precio Δ1h:</b> {m['price_chg_h1']:+.2f}%  "
         f"<b>Δ24h:</b> {m['price_chg_h24']:+.2f}%\n"
+        f"{rng}\n"
         f"🔗 <a href='https://pancakeswap.finance/info/v3/pairs/{m['address']}'>PancakeSwap V3</a>"
     )
 
@@ -548,8 +649,9 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
             price_change_24h = top_coins[cg_id].get("change_24h")
             break
 
-    fee_pct = fee_rate * 100
-    name    = f"{sym_a}/{sym_b} ({fee_pct:.2f}%)"
+    price_base = float(token_a.get("usdPrice") or 0) or None
+    fee_pct    = fee_rate * 100
+    name       = f"{sym_a}/{sym_b} ({fee_pct:.2f}%)"
 
     return {
         "address":          pool["address"],
@@ -564,6 +666,10 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
         "badge":            "🟢" if in_top100 else "🟡",
         "alert_title":      f"🌊 ORCA — POOL ESTABLE {'🟢' if in_top100 else '🟡'}",
         "pool_url":         f"https://birdeye.so/pool/{pool['address']}?chain=solana",
+        "sym_a":            sym_a,
+        "sym_b":            sym_b,
+        "price_base":       price_base,
+        "day_volumes":      None,
     }
 
 
@@ -691,6 +797,11 @@ def _compute_uniswap_metrics(
         (quote_cg and quote_cg in top_coins)
     )
 
+    _sm        = re.match(r"^(.+?)\s*/\s*(.+?)\s+[\d.]+%", name)
+    sym_a      = _sm.group(1).strip() if _sm else "?"
+    sym_b      = _sm.group(2).strip() if _sm else "?"
+    price_base = float(attr.get("base_token_price_usd") or 0) or None
+
     cfg      = UNISWAP_NETWORKS[chain]
     pool_url = cfg["app_url"].format(addr=attr["address"])
 
@@ -701,11 +812,15 @@ def _compute_uniswap_metrics(
         "vol_24h":          vol_24h,
         "fees_24h":         fees_24h,
         "apr":              apr,
-        "volume_spike":     None,   # GeckoTerminal has no weekly vol endpoint per pool
+        "volume_spike":     None,
         "price_change_24h": price_change_24h,
         "in_top100":        in_top100,
         "badge":            "🟢" if in_top100 else "🟡",
         "pool_url":         pool_url,
+        "sym_a":            sym_a,
+        "sym_b":            sym_b,
+        "price_base":       price_base,
+        "day_volumes":      None,
     }
 
 
@@ -799,6 +914,8 @@ def _compute_projectx_metrics(
     fee_pct_str = f"{fee_bps / 10_000:.2f}%"
     name        = f"{sym0}/{sym1} ({fee_pct_str})"
 
+    all_vols = [float(d.get("volumeUSD") or 0) for d in day_data]
+
     return {
         "address":          pool["id"],
         "name":             name,
@@ -811,6 +928,10 @@ def _compute_projectx_metrics(
         "in_top100":        in_top100,
         "badge":            "🟢" if in_top100 else "🟡",
         "pool_url":         PROJECTX_APP_URL.format(addr=pool["id"]),
+        "sym_a":            sym0,
+        "sym_b":            sym1,
+        "price_base":       None,
+        "day_volumes":      all_vols if len(all_vols) >= 3 else None,
     }
 
 
@@ -892,6 +1013,9 @@ def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | N
     top_syms  = {info["symbol"].lower() for info in top_coins.values()}
     in_top100 = sym_a.lower() in top_syms or sym_b.lower() in top_syms
 
+    price_base_raw = mint_a.get("price") or pool.get("price")
+    price_base     = float(price_base_raw) if price_base_raw else None
+
     fee_pct = float(pool.get("feeRate") or 0) * 100
     name    = f"{sym_a}/{sym_b} ({fee_pct:.2f}%)"
 
@@ -908,6 +1032,10 @@ def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | N
         "in_top100":        in_top100,
         "badge":            "🟢" if in_top100 else "🟡",
         "pool_url":         f"https://birdeye.so/pool/{pool_id}?chain=solana",
+        "sym_a":            sym_a,
+        "sym_b":            sym_b,
+        "price_base":       price_base,
+        "day_volumes":      None,
     }
 
 
