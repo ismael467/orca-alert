@@ -19,9 +19,9 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 STATE_FILE = Path("state.json")
 
 ORCA_API = "https://api.mainnet.orca.so/v1/whirlpool/list"
-COINGECKO_TOP30_URL = (
+COINGECKO_TOP100_URL = (
     "https://api.coingecko.com/api/v3/coins/markets"
-    "?vs_currency=usd&order=market_cap_desc&per_page=30&page=1&sparkline=false"
+    "?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false"
 )
 
 MIN_APR_PCT = 500
@@ -52,11 +52,11 @@ def send_telegram(message: str) -> bool:
         return False
 
 
-def fetch_top30_ids() -> set[str]:
-    """Return CoinGecko IDs for the top 30 coins by market cap."""
+def fetch_top100_ids() -> set[str]:
+    """Return CoinGecko IDs for the top 100 coins by market cap."""
     for attempt in range(3):
         try:
-            resp = requests.get(COINGECKO_TOP30_URL, timeout=15)
+            resp = requests.get(COINGECKO_TOP100_URL, timeout=15)
             resp.raise_for_status()
             return {coin["id"] for coin in resp.json()}
         except Exception as exc:
@@ -80,7 +80,7 @@ def fetch_whirlpools() -> list[dict]:
     return []
 
 
-def compute_metrics(pool: dict, top30_ids: set[str]) -> dict | None:
+def compute_metrics(pool: dict, top100_ids: set[str]) -> dict | None:
     tvl = float(pool.get("tvl") or 0)
     vol_24h = float((pool.get("volume") or {}).get("day") or 0)
     lp_fee_rate = float(pool.get("lpFeeRate") or 0)
@@ -98,9 +98,9 @@ def compute_metrics(pool: dict, top30_ids: set[str]) -> dict | None:
     cg_id_a = (token_a.get("coingeckoId") or "").strip()
     cg_id_b = (token_b.get("coingeckoId") or "").strip()
 
-    in_top30 = bool(
-        (cg_id_a and cg_id_a in top30_ids)
-        or (cg_id_b and cg_id_b in top30_ids)
+    in_top100 = bool(
+        (cg_id_a and cg_id_a in top100_ids)
+        or (cg_id_b and cg_id_b in top100_ids)
     )
 
     fee_pct = lp_fee_rate * 100
@@ -116,8 +116,8 @@ def compute_metrics(pool: dict, top30_ids: set[str]) -> dict | None:
         "vol_24h": vol_24h,
         "fees_24h": fees_24h,
         "apr": apr,
-        "in_top30": in_top30,
-        "badge": "🟢" if in_top30 else "🟡",
+        "in_top100": in_top100,
+        "badge": "🟢" if in_top100 else "🟡",
     }
 
 
@@ -190,8 +190,8 @@ def main() -> None:
     alerted: dict = state.setdefault("alerted_pools", {})
 
     print(f"[{now_iso}] Fetching CoinGecko top 30…")
-    top30_ids = fetch_top30_ids()
-    print(f"[{now_iso}] Top 30 loaded: {len(top30_ids)} coins")
+    top100_ids = fetch_top100_ids()
+    print(f"[{now_iso}] Top 100 loaded: {len(top100_ids)} coins")
 
     print(f"[{now_iso}] Fetching Orca whirlpools…")
     whirlpools = fetch_whirlpools()
@@ -199,12 +199,12 @@ def main() -> None:
 
     qualifying: list[dict] = []
     for pool in whirlpools:
-        m = compute_metrics(pool, top30_ids)
+        m = compute_metrics(pool, top100_ids)
         if m and passes_filters(m):
             qualifying.append(m)
 
     # Sort: 🟢 (top-30) pools first, then by APR descending
-    qualifying.sort(key=lambda x: (-int(x["in_top30"]), -x["apr"]))
+    qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
 
     print(f"[{now_iso}] {len(qualifying)} pools pass filters")
 

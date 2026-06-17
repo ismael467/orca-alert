@@ -62,7 +62,7 @@ NEW_MAX_APR    = 3_000.0
 NEW_PRICE_MIN  = -10.0   # %
 NEW_PRICE_MAX  =  20.0   # %
 NEW_SPIKE_MIN  =   2.0   # × 6-day average
-TOP_N_COINS    =  20
+TOP_N_COINS    = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Orca
@@ -227,7 +227,7 @@ def passes_new_filters(m: dict) -> bool:
         return False
     if m.get("volume_spike", 0.0) < NEW_SPIKE_MIN:
         return False
-    if not m.get("in_top20"):
+    if not m.get("in_top100"):
         return False
     return True
 
@@ -536,7 +536,7 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
 
     in_a     = cg_a in top_coins
     in_b     = cg_b in top_coins
-    in_top20 = in_a or in_b
+    in_top100 = in_a or in_b
 
     # Price Δ: use the non-stable top-20 token's CoinGecko 24h change
     price_change_24h: float | None = None
@@ -557,8 +557,8 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
         "apr":              apr,
         "volume_spike":     vol_spike,
         "price_change_24h": price_change_24h,
-        "in_top20":         in_top20,
-        "badge":            "🟢" if in_top20 else "🟡",
+        "in_top100":         in_top100,
+        "badge":            "🟢" if in_top100 else "🟡",
         "pool_url":         f"https://birdeye.so/pool/{pool['address']}?chain=solana",
     }
 
@@ -574,7 +574,7 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
         if m and passes_new_filters(m):
             qualifying.append(m)
 
-    qualifying.sort(key=lambda x: (-int(x["in_top20"]), -x["apr"]))
+    qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[Orca] {len(qualifying)} pools pass filters")
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, "ORCA", ns_state, now_iso)
@@ -662,7 +662,7 @@ def _compute_uniswap_metrics(
             price_change_24h = (curr_close - prev_close) / prev_close * 100
 
     top_syms = {info["symbol"] for info in top_coins.values()}
-    in_top20 = sym0 in top_syms or sym1 in top_syms
+    in_top100 = sym0 in top_syms or sym1 in top_syms
 
     fee_tier_bps = int(pool.get("feeTier") or 0)
     fee_pct_str  = f"{fee_tier_bps / 10_000:.2f}%"
@@ -680,8 +680,8 @@ def _compute_uniswap_metrics(
         "apr":              apr,
         "volume_spike":     vol_spike,
         "price_change_24h": price_change_24h,
-        "in_top20":         in_top20,
-        "badge":            "🟢" if in_top20 else "🟡",
+        "in_top100":         in_top100,
+        "badge":            "🟢" if in_top100 else "🟡",
         "pool_url":         pool_url,
     }
 
@@ -712,7 +712,7 @@ def run_uniswap(
         if m and passes_new_filters(m):
             qualifying.append(m)
 
-    qualifying.sort(key=lambda x: (-int(x["in_top20"]), -x["apr"]))
+    qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
