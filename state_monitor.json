@@ -36,8 +36,8 @@
       "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
         "first_seen": "2026-06-16T22:20:58.911355+00:00",
         "last_alert": "2026-06-16T22:20:58.911355+00:00",
-        "last_tvl": 50456.1944,
-        "last_vol_24h": 364691.971852873,
+        "last_tvl": 50770.8322,
+        "last_vol_24h": 370838.979023039,
         "alerted_decline": false,
         "name": "USELESS / WBNB 0.25%"
       },
@@ -56,9 +56,25 @@
         "last_vol_24h": 865457.940847194,
         "alerted_decline": false,
         "name": "UNI / WBNB 0.05%"
+      },
+      "bsc_0xaead6bd31dd66eb3a6216aaf271d0e661585b0b1": {
+        "first_seen": "2026-06-17T15:28:47.314122+00:00",
+        "last_alert": "2026-06-17T15:28:47.314122+00:00",
+        "last_tvl": 696827.7288,
+        "last_vol_24h": 1057964.9163461,
+        "alerted_decline": false,
+        "name": "ASTER / USDT 0.25%"
+      },
+      "bsc_0xfc185e4bc9d0e12b7835f0e31b7d032c6579f894": {
+        "first_seen": "2026-06-17T15:28:47.314122+00:00",
+        "last_alert": "2026-06-17T15:28:47.314122+00:00",
+        "last_tvl": 39250.9683,
+        "last_vol_24h": 403231.203513013,
+        "alerted_decline": false,
+        "name": "ASTER / WBNB 0.05%"
       }
     },
-    "qualifying_count": 2
+    "qualifying_count": 3
   },
   "orca": {
     "qualifying_count": 0,
@@ -70,5 +86,5 @@
   "uniswap_base": {
     "qualifying_count": 0
   },
-  "last_run": "2026-06-17T11:59:42.224383+00:00"
+  "last_run": "2026-06-17T15:28:47.314122+00:00"
 }
