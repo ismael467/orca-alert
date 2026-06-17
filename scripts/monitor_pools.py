@@ -4,6 +4,7 @@
 Sources:
   PancakeSwap V3 BSC      — GeckoTerminal (original filters, logic unchanged)
   Orca Whirlpools         — api.mainnet.orca.so
+  Raydium CLMM            — api-v3.raydium.io
   Uniswap V3 Ethereum     — GeckoTerminal
   Uniswap V3 Arbitrum     — GeckoTerminal
   Uniswap V3 Base         — GeckoTerminal
@@ -69,6 +70,15 @@ TOP_N_COINS    = 100
 # ─────────────────────────────────────────────────────────────────────────────
 
 ORCA_API = "https://api.mainnet.orca.so/v1/whirlpool/list"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Raydium CLMM (Solana)
+# ─────────────────────────────────────────────────────────────────────────────
+
+RAYDIUM_API = (
+    "https://api-v3.raydium.io/pools/info/list"
+    "?poolType=concentrated&poolSortField=volume24h&sortType=desc&pageSize=100&page={page}"
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Uniswap V3 — GeckoTerminal
@@ -829,6 +839,95 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> in
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Raydium CLMM (Solana)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _fetch_raydium_pools(max_pages: int = 5) -> list[dict]:
+    pools: list[dict] = []
+    for page in range(1, max_pages + 1):
+        url = RAYDIUM_API.format(page=page)
+        resp = None
+        for attempt in range(3):
+            try:
+                r = requests.get(url, timeout=30)
+                r.raise_for_status()
+                resp = r
+                break
+            except Exception as exc:
+                print(f"[Raydium] page {page} attempt {attempt+1}: {exc}")
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+        if resp is None:
+            break
+        data = resp.json().get("data", {}).get("data", [])
+        if not data:
+            break
+        pools.extend(data)
+        last_vol = float((data[-1].get("day") or {}).get("volume") or 0)
+        if last_vol < NEW_MIN_VOL:
+            break
+    return pools
+
+
+def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None:
+    tvl      = float(pool.get("tvl") or 0)
+    vol_day  = float((pool.get("day")  or {}).get("volume")    or 0)
+    vol_week = float((pool.get("week") or {}).get("volume")    or 0)
+    fees_24h = float((pool.get("day")  or {}).get("volumeFee") or 0)
+
+    if tvl <= 0 or vol_day <= 0 or fees_24h <= 0:
+        return None
+
+    apr = (fees_24h / tvl) * 365 * 100
+
+    six_day_vol = max(vol_week - vol_day, 0.0)
+    six_day_avg = six_day_vol / 6 if six_day_vol > 0 else 0.0
+    vol_spike   = vol_day / six_day_avg if six_day_avg > 0 else None
+
+    mint_a = pool.get("mintA") or {}
+    mint_b = pool.get("mintB") or {}
+    sym_a  = (mint_a.get("symbol") or "?").strip()
+    sym_b  = (mint_b.get("symbol") or "?").strip()
+
+    top_syms  = {info["symbol"].lower() for info in top_coins.values()}
+    in_top100 = sym_a.lower() in top_syms or sym_b.lower() in top_syms
+
+    fee_pct = float(pool.get("feeRate") or 0) * 100
+    name    = f"{sym_a}/{sym_b} ({fee_pct:.2f}%)"
+
+    pool_id = pool.get("id", "")
+    return {
+        "address":          pool_id,
+        "name":             name,
+        "tvl":              tvl,
+        "vol_24h":          vol_day,
+        "fees_24h":         fees_24h,
+        "apr":              apr,
+        "volume_spike":     vol_spike,
+        "price_change_24h": None,
+        "in_top100":        in_top100,
+        "badge":            "🟢" if in_top100 else "🟡",
+        "pool_url":         f"https://birdeye.so/pool/{pool_id}?chain=solana",
+    }
+
+
+def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
+    label = "RAYDIUM"
+    print(f"[{label}] Fetching concentrated pools…")
+    pools = _fetch_raydium_pools()
+    print(f"[{label}] Fetched {len(pools)} pools")
+    qualifying: list[dict] = []
+    for pool in pools:
+        m = _compute_raydium_metrics(pool, top_coins)
+        if m and passes_new_filters(m):
+            qualifying.append(m)
+    qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
+    print(f"[{label}] {len(qualifying)} pools pass filters")
+    ns_state["qualifying_count"] = len(qualifying)
+    return _process_new_source(qualifying, label, ns_state, now_iso)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -853,6 +952,8 @@ def main() -> None:
     total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins)
     time.sleep(3)
     total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins)
+    time.sleep(3)
+    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins)
 
     state["last_run"] = now_iso
     save_state(state)
