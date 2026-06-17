@@ -578,7 +578,7 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
 # Uniswap V3 via GeckoTerminal (Arbitrum + Base)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _fetch_uniswap_pools(chain: str, max_pages: int = 15) -> tuple[list[dict], dict[str, str]]:
+def _fetch_uniswap_pools(chain: str, max_pages: int = 5) -> tuple[list[dict], dict[str, str]]:
     """Fetch Uniswap V3 pools for a given chain from GeckoTerminal.
 
     Returns (pools, token_cg_map).
