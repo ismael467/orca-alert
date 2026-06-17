@@ -309,7 +309,7 @@ def _fetch_pancake_pools(max_pages: int = 20) -> list[dict]:
                 time.sleep(2 ** attempt)
                 continue
             if resp.status_code == 429:
-                wait = int(resp.headers.get("Retry-After", 10))
+                wait = max(15, int(resp.headers.get("Retry-After", 15)))
                 print(f"[PancakeSwap] Rate limited, waiting {wait}s…")
                 time.sleep(wait)
                 continue
@@ -578,7 +578,7 @@ def _fetch_uniswap_pools(chain: str, max_pages: int = 15) -> tuple[list[dict], d
                 time.sleep(2 ** attempt)
                 continue
             if resp.status_code == 429:
-                wait = int(resp.headers.get("Retry-After", 10))
+                wait = max(15, int(resp.headers.get("Retry-After", 15)))
                 print(f"[{label}] Rate limited, waiting {wait}s…")
                 time.sleep(wait)
                 continue
@@ -711,9 +711,13 @@ def main() -> None:
     print(f"[CoinGecko] Loaded {len(top_coins)} coins")
 
     total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso)
+    time.sleep(3)
     total += run_orca(state.setdefault("orca", {}), now_iso, top_coins)
+    time.sleep(3)
     total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins)
+    time.sleep(3)
     total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins)
+    time.sleep(3)
     total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins)
 
     state["last_run"] = now_iso
