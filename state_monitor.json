@@ -36,8 +36,8 @@
       "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
         "first_seen": "2026-06-16T22:20:58.911355+00:00",
         "last_alert": "2026-06-16T22:20:58.911355+00:00",
-        "last_tvl": 50944.4234,
-        "last_vol_24h": 370842.868653054,
+        "last_tvl": 50997.9336,
+        "last_vol_24h": 370860.971770697,
         "alerted_decline": false,
         "name": "USELESS / WBNB 0.25%"
       },
@@ -74,23 +74,61 @@
         "name": "ASTER / WBNB 0.05%"
       }
     },
-    "qualifying_count": 2
+    "qualifying_count": 1
   },
   "orca": {
     "qualifying_count": 0,
     "alerted_pools": {}
   },
   "uniswap_arbitrum": {
-    "qualifying_count": 0,
-    "alerted_pools": {}
+    "qualifying_count": 3,
+    "alerted_pools": {
+      "0xc24f7d8e51a64dc1238880bd00bb961d54cbeb29": {
+        "first_seen": "2026-06-17T16:11:21.003437+00:00",
+        "last_tvl": 244011.4729,
+        "last_vol_24h": 543711.709022503,
+        "alerted_decline": false,
+        "name": "UNI / WETH 0.3%"
+      },
+      "0x91308bc9ce8ca2db82aa30c65619856cc939d907": {
+        "first_seen": "2026-06-17T16:11:21.003437+00:00",
+        "last_tvl": 259203.301,
+        "last_vol_24h": 756845.090705263,
+        "alerted_decline": false,
+        "name": "LINK / WETH 0.05%"
+      },
+      "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1": {
+        "first_seen": "2026-06-17T16:11:21.003437+00:00",
+        "last_tvl": 352201.4173,
+        "last_vol_24h": 666512.833307056,
+        "alerted_decline": false,
+        "name": "ARB / USDT 0.3%"
+      }
+    }
   },
   "uniswap_base": {
-    "qualifying_count": 0,
-    "alerted_pools": {}
+    "qualifying_count": 1,
+    "alerted_pools": {
+      "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
+        "first_seen": "2026-06-17T16:11:21.003437+00:00",
+        "last_tvl": 201216.2954,
+        "last_vol_24h": 411399.438357696,
+        "alerted_decline": false,
+        "name": "USDC / VVV 0.3%"
+      }
+    }
   },
-  "last_run": "2026-06-17T15:55:46.663268+00:00",
+  "last_run": "2026-06-17T16:11:21.003437+00:00",
   "uniswap_ethereum": {
-    "qualifying_count": 0,
-    "alerted_pools": {}
+    "qualifying_count": 1,
+    "alerted_pools": {
+      "0xf763bb342eb3d23c02ccb86312422fe0c1c17e94": {
+        "first_seen": "2026-06-17T16:11:21.003437+00:00",
+        "last_tvl": 953024.1661,
+        "last_vol_24h": 248758.005209142,
+        "alerted_decline": false,
+        "name": "wTAO / USDC 1%"
+      }
+    }
   }
 }
