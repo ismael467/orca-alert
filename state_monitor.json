@@ -36,8 +36,8 @@
       "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
         "first_seen": "2026-06-16T22:20:58.911355+00:00",
         "last_alert": "2026-06-16T22:20:58.911355+00:00",
-        "last_tvl": 50770.8322,
-        "last_vol_24h": 370838.979023039,
+        "last_tvl": 50944.4234,
+        "last_vol_24h": 370842.868653054,
         "alerted_decline": false,
         "name": "USELESS / WBNB 0.25%"
       },
@@ -60,8 +60,8 @@
       "bsc_0xaead6bd31dd66eb3a6216aaf271d0e661585b0b1": {
         "first_seen": "2026-06-17T15:28:47.314122+00:00",
         "last_alert": "2026-06-17T15:28:47.314122+00:00",
-        "last_tvl": 694195.8413,
-        "last_vol_24h": 1066371.64594174,
+        "last_tvl": 696636.9259,
+        "last_vol_24h": 1104173.67914316,
         "alerted_decline": false,
         "name": "ASTER / USDT 0.25%"
       },
@@ -81,10 +81,16 @@
     "alerted_pools": {}
   },
   "uniswap_arbitrum": {
-    "qualifying_count": 0
+    "qualifying_count": 0,
+    "alerted_pools": {}
   },
   "uniswap_base": {
-    "qualifying_count": 0
+    "qualifying_count": 0,
+    "alerted_pools": {}
   },
-  "last_run": "2026-06-17T15:32:58.174608+00:00"
+  "last_run": "2026-06-17T15:55:46.663268+00:00",
+  "uniswap_ethereum": {
+    "qualifying_count": 0,
+    "alerted_pools": {}
+  }
 }
