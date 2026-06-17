@@ -36,8 +36,8 @@
       "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
         "first_seen": "2026-06-16T22:20:58.911355+00:00",
         "last_alert": "2026-06-16T22:20:58.911355+00:00",
-        "last_tvl": 50997.9336,
-        "last_vol_24h": 370860.971770697,
+        "last_tvl": 51063.5561,
+        "last_vol_24h": 370873.47764866,
         "alerted_decline": false,
         "name": "USELESS / WBNB 0.25%"
       },
@@ -77,55 +77,91 @@
     "qualifying_count": 1
   },
   "orca": {
-    "qualifying_count": 0,
-    "alerted_pools": {}
+    "qualifying_count": 3,
+    "alerted_pools": {
+      "C9U2Ksk6KKWvLEeo5yUQ7Xu46X7NzeBJtd9PBfuXaUSM": {
+        "first_seen": "2026-06-17T16:27:04.219630+00:00",
+        "last_tvl": 3407153.6208563223,
+        "last_vol_24h": 51209591.37803372,
+        "alerted_decline": false,
+        "name": "SOL/Fartcoin (0.16%)"
+      },
+      "57mP5WoNrg3uiGFUdoeYr2CPUZak1L2ZgFtyFwoT7K6G": {
+        "first_seen": "2026-06-17T16:27:04.219630+00:00",
+        "last_tvl": 312202.0309723915,
+        "last_vol_24h": 1513522.792196298,
+        "alerted_decline": false,
+        "name": "SOL/arc (0.16%)"
+      },
+      "AgeSxtVWWMojFWYNrXKnVp9cFuC5CQ7M4rzmrseLxfUj": {
+        "first_seen": "2026-06-17T16:27:04.219630+00:00",
+        "last_tvl": 355999.7112759643,
+        "last_vol_24h": 842251.8996947081,
+        "alerted_decline": false,
+        "name": "USDC/SPX (0.30%)"
+      }
+    }
   },
   "uniswap_arbitrum": {
     "qualifying_count": 3,
     "alerted_pools": {
       "0xc24f7d8e51a64dc1238880bd00bb961d54cbeb29": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 244011.4729,
-        "last_vol_24h": 543711.709022503,
+        "last_tvl": 243723.1217,
+        "last_vol_24h": 534716.813931606,
         "alerted_decline": false,
         "name": "UNI / WETH 0.3%"
       },
       "0x91308bc9ce8ca2db82aa30c65619856cc939d907": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 259203.301,
-        "last_vol_24h": 756845.090705263,
+        "last_tvl": 259873.3616,
+        "last_vol_24h": 809261.024192541,
         "alerted_decline": false,
         "name": "LINK / WETH 0.05%"
       },
       "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 352201.4173,
-        "last_vol_24h": 666512.833307056,
+        "last_tvl": 352217.9187,
+        "last_vol_24h": 670453.834529216,
         "alerted_decline": false,
         "name": "ARB / USDT 0.3%"
       }
     }
   },
   "uniswap_base": {
-    "qualifying_count": 1,
+    "qualifying_count": 3,
     "alerted_pools": {
       "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 201216.2954,
-        "last_vol_24h": 411399.438357696,
+        "last_tvl": 202330.6324,
+        "last_vol_24h": 422918.442256171,
         "alerted_decline": false,
         "name": "USDC / VVV 0.3%"
+      },
+      "0x6c561b446416e1a00e8e93e221854d6ea4171372": {
+        "first_seen": "2026-06-17T16:27:04.219630+00:00",
+        "last_tvl": 101984405.322,
+        "last_vol_24h": 73685623.7537208,
+        "alerted_decline": false,
+        "name": "WETH / USDC 0.3%"
+      },
+      "0x529d2863a1521d0b57db028168fde2e97120017c": {
+        "first_seen": "2026-06-17T16:27:04.219630+00:00",
+        "last_tvl": 866395.8121,
+        "last_vol_24h": 1115683.54779069,
+        "alerted_decline": false,
+        "name": "VIRTUAL / USDC 0.3%"
       }
     }
   },
-  "last_run": "2026-06-17T16:11:21.003437+00:00",
+  "last_run": "2026-06-17T16:27:04.219630+00:00",
   "uniswap_ethereum": {
     "qualifying_count": 1,
     "alerted_pools": {
       "0xf763bb342eb3d23c02ccb86312422fe0c1c17e94": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 953024.1661,
-        "last_vol_24h": 248758.005209142,
+        "last_tvl": 944811.3476,
+        "last_vol_24h": 258839.590889477,
         "alerted_decline": false,
         "name": "wTAO / USDC 1%"
       }
