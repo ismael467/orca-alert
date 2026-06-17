@@ -212,8 +212,9 @@ def _build_new_alert(m: dict, label: str) -> str:
         f"Vol Spike:   {spike:.1f}×\n"
         f"{pc_line}"
     ).rstrip()
+    title = m.get("alert_title") or f"🚨 NUEVA OPORTUNIDAD — {label} {m['badge']}"
     return (
-        f"🚨 NUEVA OPORTUNIDAD — {label} {m['badge']}\n\n"
+        f"{title}\n\n"
         f"<pre>{body}</pre>\n\n"
         f"🔗 {m['pool_url']}"
     )
@@ -489,10 +490,7 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
     fees_24h = vol_day * fee_rate
     apr      = (fees_24h / tvl) * 365 * 100
 
-    # Volume spike: today vs (week minus today) / 6
-    six_day_vol = max(vol_week - vol_day, 0.0)
-    six_day_avg = six_day_vol / 6 if six_day_vol > 0 else 0.0
-    vol_spike   = vol_day / six_day_avg if six_day_avg > 0 else 0.0
+    # Spike filter skipped for Orca (weekly vol not granular enough to be reliable)
 
     token_a = pool.get("tokenA") or {}
     token_b = pool.get("tokenB") or {}
@@ -522,10 +520,11 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
         "vol_24h":          vol_day,
         "fees_24h":         fees_24h,
         "apr":              apr,
-        "volume_spike":     vol_spike,
+        "volume_spike":     None,
         "price_change_24h": price_change_24h,
-        "in_top100":         in_top100,
+        "in_top100":        in_top100,
         "badge":            "🟢" if in_top100 else "🟡",
+        "alert_title":      f"🌊 ORCA — POOL ESTABLE {'🟢' if in_top100 else '🟡'}",
         "pool_url":         f"https://birdeye.so/pool/{pool['address']}?chain=solana",
     }
 
