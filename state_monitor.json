@@ -36,8 +36,8 @@
       "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
         "first_seen": "2026-06-16T22:20:58.911355+00:00",
         "last_alert": "2026-06-16T22:20:58.911355+00:00",
-        "last_tvl": 51071.4738,
-        "last_vol_24h": 370991.786513726,
+        "last_tvl": 51124.2888,
+        "last_vol_24h": 371011.283181311,
         "alerted_decline": false,
         "name": "USELESS / WBNB 0.25%"
       },
@@ -72,9 +72,17 @@
         "last_vol_24h": 403231.203513013,
         "alerted_decline": false,
         "name": "ASTER / WBNB 0.05%"
+      },
+      "bsc_0xb040ea24a4ef35a3ed400b0ff26d8b6f30deecad": {
+        "first_seen": "2026-06-17T18:02:03.751262+00:00",
+        "last_alert": "2026-06-17T18:02:03.751262+00:00",
+        "last_tvl": 3163304.7037,
+        "last_vol_24h": 11047896.4894829,
+        "alerted_decline": false,
+        "name": "ASTER / WBNB 0.25%"
       }
     },
-    "qualifying_count": 4
+    "qualifying_count": 2
   },
   "orca": {
     "qualifying_count": 3,
@@ -107,8 +115,8 @@
     "alerted_pools": {
       "0xc24f7d8e51a64dc1238880bd00bb961d54cbeb29": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 243000.6579,
-        "last_vol_24h": 531057.886343171,
+        "last_tvl": 243811.1907,
+        "last_vol_24h": 520874.01843532,
         "alerted_decline": false,
         "name": "UNI / WETH 0.3%"
       },
@@ -121,40 +129,47 @@
       },
       "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 350834.5876,
-        "last_vol_24h": 687338.33738788,
+        "last_tvl": 349312.9011,
+        "last_vol_24h": 652853.453149872,
         "alerted_decline": false,
         "name": "ARB / USDT 0.3%"
       }
     }
   },
   "uniswap_base": {
-    "qualifying_count": 1,
+    "qualifying_count": 4,
     "alerted_pools": {
       "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 210006.5257,
-        "last_vol_24h": 426889.119013035,
+        "last_tvl": 208140.4272,
+        "last_vol_24h": 418625.117430798,
         "alerted_decline": false,
         "name": "USDC / VVV 0.3%"
       },
       "0x6c561b446416e1a00e8e93e221854d6ea4171372": {
         "first_seen": "2026-06-17T16:27:04.219630+00:00",
-        "last_tvl": 101984405.322,
-        "last_vol_24h": 73685623.7537208,
+        "last_tvl": 101734045.1512,
+        "last_vol_24h": 82972105.0891974,
         "alerted_decline": false,
         "name": "WETH / USDC 0.3%"
       },
       "0x529d2863a1521d0b57db028168fde2e97120017c": {
         "first_seen": "2026-06-17T16:27:04.219630+00:00",
-        "last_tvl": 866395.8121,
-        "last_vol_24h": 1115683.54779069,
+        "last_tvl": 847872.701,
+        "last_vol_24h": 1220827.82760694,
         "alerted_decline": false,
         "name": "VIRTUAL / USDC 0.3%"
+      },
+      "0x1d2bdb7117a5a7d7fe4c1d95681a92e4df13bb69": {
+        "first_seen": "2026-06-17T18:02:03.751262+00:00",
+        "last_tvl": 677902.3266,
+        "last_vol_24h": 362328.096312896,
+        "alerted_decline": false,
+        "name": "VVV / WETH 1%"
       }
     }
   },
-  "last_run": "2026-06-17T17:37:47.550698+00:00",
+  "last_run": "2026-06-17T18:02:03.751262+00:00",
   "uniswap_ethereum": {
     "qualifying_count": 0,
     "alerted_pools": {
