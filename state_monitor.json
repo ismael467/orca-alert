@@ -12,8 +12,8 @@
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 25518.3555,
-        "last_vol_24h": 413398.96197133,
+        "last_tvl": 25440.1124,
+        "last_vol_24h": 401158.108530274,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
@@ -28,8 +28,8 @@
       "bsc_0xee04b2a82bab9efefcd626f5d66f51cc2b6fa12a": {
         "first_seen": "2026-06-16T20:47:47.467079+00:00",
         "last_alert": "2026-06-16T20:47:47.467079+00:00",
-        "last_tvl": 36802.3965,
-        "last_vol_24h": 418339.123821268,
+        "last_tvl": 36838.6929,
+        "last_vol_24h": 415551.909108473,
         "alerted_decline": true,
         "name": "4 / USDT 0.25%"
       },
@@ -40,9 +40,25 @@
         "last_vol_24h": 154248.491321414,
         "alerted_decline": false,
         "name": "USELESS / WBNB 0.25%"
+      },
+      "bsc_0x3d7da1ff0dbc756f21d9aeaddf16c9c0703bad40": {
+        "first_seen": "2026-06-17T02:07:27.882426+00:00",
+        "last_alert": "2026-06-17T02:07:27.882426+00:00",
+        "last_tvl": 1039.4711,
+        "last_vol_24h": 339945.507474331,
+        "alerted_decline": false,
+        "name": "币安人生 / USDT 0.25%"
+      },
+      "bsc_0xb02303818ad432dcc9a4860ae333238b29f6164f": {
+        "first_seen": "2026-06-17T02:07:27.882426+00:00",
+        "last_alert": "2026-06-17T02:07:27.882426+00:00",
+        "last_tvl": 31018.0393,
+        "last_vol_24h": 283731.457502091,
+        "alerted_decline": false,
+        "name": "UNI / WBNB 0.05%"
       }
     },
-    "qualifying_count": 3
+    "qualifying_count": 4
   },
   "orca": {
     "qualifying_count": 0,
@@ -54,5 +70,5 @@
   "uniswap_base": {
     "qualifying_count": 0
   },
-  "last_run": "2026-06-16T23:50:52.696988+00:00"
+  "last_run": "2026-06-17T02:07:27.882426+00:00"
 }
