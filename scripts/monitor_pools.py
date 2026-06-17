@@ -107,7 +107,7 @@ PROJECTX_APP_URL = "https://app.projectx.finance/#/pool/{addr}"
 
 _PROJECTX_QUERY = """
 {
-  pools(first: 1000, orderBy: totalValueLockedUSD, orderDirection: desc) {
+  pools(first: 100, orderBy: totalValueLockedUSD, orderDirection: desc) {
     id
     feeTier
     totalValueLockedUSD
@@ -730,7 +730,7 @@ def run_uniswap(
 def _graphql_post(url: str, query: str) -> dict | None:
     for attempt in range(3):
         try:
-            resp = requests.post(url, json={"query": query}, timeout=30)
+            resp = requests.post(url, json={"query": query}, timeout=60)
             if resp.status_code == 200:
                 payload = resp.json()
                 if "errors" in payload:
