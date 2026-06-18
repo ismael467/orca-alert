@@ -243,25 +243,40 @@ def _range_line(
     price_base: float | None,
     price_change_24h: float | None,
     day_volumes: list[float] | None = None,
+    range_hist: dict | None = None,
 ) -> str:
-    base_pct = _range_fallback_pct(sym_a, sym_b)
-    low_pct  = base_pct
-    high_pct = base_pct
-    if price_change_24h is not None and abs(price_change_24h) > 5.0:
-        if price_change_24h > 0:
-            high_pct += 5.0
-        else:
-            low_pct  += 5.0
-    spike_dur = _avg_spike_days(day_volumes) if day_volumes else None
-    dur_str   = f"{spike_dur:.1f} días" if spike_dur is not None else "N/D"
-    if price_base and price_base > 0:
-        low  = price_base * (1 - low_pct  / 100)
-        high = price_base * (1 + high_pct / 100)
-        pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
-        range_str = f"{_fmt_price(low)} — {_fmt_price(high)} ({pct_str})"
+    spike_count   = range_hist["spike_count"]   if range_hist else 0
+    avg_spike_dur = range_hist["avg_spike_dur"] if range_hist else None
+    if avg_spike_dur is None and day_volumes:
+        avg_spike_dur = _avg_spike_days(day_volumes)
+    dur_str = f"{avg_spike_dur:.1f} días" if avg_spike_dur is not None else "N/D"
+
+    if spike_count >= 3 and range_hist:
+        spike_prices = range_hist["spike_prices"]
+        low  = min(spike_prices) * 0.95
+        high = max(spike_prices) * 1.05
+        if price_change_24h is not None and price_change_24h > 5.0:
+            high *= 1.05
+        elif price_change_24h is not None and price_change_24h < -5.0:
+            low  *= 0.95
+        range_str = f"{_fmt_price(low)} — {_fmt_price(high)} (histórico)"
     else:
-        pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
-        range_str = pct_str
+        base_pct = _range_fallback_pct(sym_a, sym_b)
+        low_pct  = base_pct
+        high_pct = base_pct
+        if price_change_24h is not None and abs(price_change_24h) > 5.0:
+            if price_change_24h > 0:
+                high_pct += 5.0
+            else:
+                low_pct  += 5.0
+        if price_base and price_base > 0:
+            low  = price_base * (1 - low_pct  / 100)
+            high = price_base * (1 + high_pct / 100)
+            pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
+            range_str = f"{_fmt_price(low)} — {_fmt_price(high)} ({pct_str})"
+        else:
+            pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
+            range_str = pct_str
     return f"📐 Rango sugerido: {range_str} | ⏱ Duración media spike: {dur_str}"
 
 
@@ -356,6 +371,66 @@ def _enrich_rsi(qualifying: list[dict], rsi_cache: dict) -> None:
         m["rsi"] = _fetch_rsi(m.get("cg_id_main"), m.get("sym_main", ""), rsi_cache)
 
 
+def _fetch_range_history(cg_id: str | None, cache: dict) -> dict | None:
+    if not cg_id:
+        return None
+    key = f"rng_{cg_id}"
+    if key in cache:
+        return cache[key]
+    url = (
+        f"https://api.coingecko.com/api/v3/coins/{cg_id}"
+        "/market_chart?vs_currency=usd&days=30&interval=daily"
+    )
+    result = None
+    for attempt in range(3):
+        try:
+            resp = requests.get(url, timeout=20)
+            if resp.status_code == 429:
+                print(f"[Range/CoinGecko] rate limit — waiting 15s…")
+                time.sleep(15)
+                continue
+            if resp.status_code == 200:
+                data = resp.json()
+                prices_raw = data.get("prices", [])
+                vols_raw   = data.get("total_volumes", [])
+                if len(prices_raw) >= 10 and len(vols_raw) >= 10:
+                    prices = [float(p[1]) for p in prices_raw]
+                    vols   = [float(v[1]) for v in vols_raw]
+                    spike_prices: list[float] = []
+                    runs: list[int] = []
+                    run = 0
+                    for i in range(6, len(vols)):
+                        prev = vols[i - 6:i]
+                        mean_prev = sum(prev) / 6
+                        if mean_prev > 0 and vols[i] >= 2 * mean_prev:
+                            spike_prices.append(prices[i])
+                            run += 1
+                        else:
+                            if run:
+                                runs.append(run)
+                                run = 0
+                    if run:
+                        runs.append(run)
+                    avg_dur = sum(runs) / len(runs) if runs else None
+                    result = {
+                        "spike_prices":  spike_prices,
+                        "spike_count":   len(spike_prices),
+                        "avg_spike_dur": avg_dur,
+                    }
+                break
+        except Exception as exc:
+            print(f"[Range/CoinGecko] {exc}")
+            if attempt < 2:
+                time.sleep(2)
+    cache[key] = result
+    return result
+
+
+def _enrich_range(qualifying: list[dict], rsi_cache: dict) -> None:
+    for m in qualifying:
+        m["range_hist"] = _fetch_range_history(m.get("cg_id_main"), rsi_cache)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CoinGecko top-N (fetched once per run, shared by all new sources)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -427,6 +502,7 @@ def _build_new_alert(m: dict, label: str) -> str:
         m.get("price_base"),
         pc,
         m.get("day_volumes"),
+        m.get("range_hist"),
     )
     return (
         f"{title}\n\n"
@@ -617,6 +693,8 @@ def _build_pancake_alert(m: dict) -> str:
         m.get("sym_b", "?"),
         m.get("price_base"),
         m.get("price_chg_h24"),
+        None,
+        m.get("range_hist"),
     )
     return (
         f"🚨 <b>NUEVA OPORTUNIDAD{btcb_badge}</b>\n"
@@ -660,6 +738,7 @@ def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict) -> int:
     qualifying.sort(key=lambda x: (-int(x["is_btcb"]), -x["apr"]))
     print(f"[PancakeSwap] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
+    _enrich_range(qualifying, rsi_cache)
 
     alerted: dict = ns_state.setdefault("alerted_pools", {})
     alerts_sent = 0
@@ -796,6 +875,7 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[Orca] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
+    _enrich_range(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, "ORCA", ns_state, now_iso)
 
@@ -966,6 +1046,7 @@ def run_uniswap(
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
+    _enrich_range(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -1083,6 +1164,7 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_c
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
+    _enrich_range(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -1185,6 +1267,7 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
+    _enrich_range(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
