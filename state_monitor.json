@@ -12,8 +12,8 @@
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 23912.0684,
-        "last_vol_24h": 224414.852086231,
+        "last_tvl": 23742.3183,
+        "last_vol_24h": 216018.413130778,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
@@ -100,15 +100,15 @@
       "bsc_0x8afe2bb12382497134e8455355eb7f405f896681": {
         "first_seen": "2026-06-17T23:51:35.287683+00:00",
         "last_alert": "2026-06-17T23:51:35.287683+00:00",
-        "last_tvl": 9529.9648,
-        "last_vol_24h": 186632.619099832,
+        "last_tvl": 9292.9163,
+        "last_vol_24h": 205791.203347272,
         "alerted_decline": false,
         "name": "ESPORTS / WBNB 1%"
       },
       "bsc_0xb6ddc88a86f7fd5eae3bd5ecb0c0b244fee9db45": {
         "first_seen": "2026-06-18T02:05:52.619621+00:00",
         "last_alert": "2026-06-18T02:05:52.619621+00:00",
-        "last_tvl": 610.8455,
+        "last_tvl": 596.9417,
         "last_vol_24h": 206455.716805079,
         "alerted_decline": true,
         "name": "ESPORTS / USDC 1%"
@@ -124,13 +124,21 @@
       "bsc_0xf8c91b8ddd848ca1f4fb591e9459dc5777db5b39": {
         "first_seen": "2026-06-18T14:23:37.894558+00:00",
         "last_alert": "2026-06-18T14:23:37.894558+00:00",
-        "last_tvl": 47061.8146,
-        "last_vol_24h": 142560.059311492,
+        "last_tvl": 46074.6883,
+        "last_vol_24h": 158736.270300241,
         "alerted_decline": false,
         "name": "BSB / USDT 0.25%"
+      },
+      "bsc_0xc9f124dccc7095de7bf65d388cd75519669a6b2e": {
+        "first_seen": "2026-06-18T17:36:56.129836+00:00",
+        "last_alert": "2026-06-18T17:36:56.129836+00:00",
+        "last_tvl": 53257.361,
+        "last_vol_24h": 140518.252673201,
+        "alerted_decline": false,
+        "name": "4 / WBNB 0.25%"
       }
     },
-    "qualifying_count": 4
+    "qualifying_count": 5
   },
   "orca": {
     "qualifying_count": 3,
@@ -185,7 +193,7 @@
     }
   },
   "uniswap_base": {
-    "qualifying_count": 3,
+    "qualifying_count": 1,
     "alerted_pools": {
       "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
@@ -224,16 +232,16 @@
       },
       "0x0b1c2dcbbfa744ebd3fc17ff1a96a1e1eb4b2d69": {
         "first_seen": "2026-06-17T20:05:29.798021+00:00",
-        "last_tvl": 740090.2986,
-        "last_vol_24h": 143002.28010655,
+        "last_tvl": 710419.1619,
+        "last_vol_24h": 262186.429184563,
         "alerted_decline": false,
         "name": "WETH / USDC 1%"
       }
     }
   },
-  "last_run": "2026-06-18T14:23:37.894558+00:00",
+  "last_run": "2026-06-18T17:36:56.129836+00:00",
   "uniswap_ethereum": {
-    "qualifying_count": 2,
+    "qualifying_count": 1,
     "alerted_pools": {
       "0xf763bb342eb3d23c02ccb86312422fe0c1c17e94": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
@@ -276,6 +284,13 @@
         "last_vol_24h": 353338.638050592,
         "alerted_decline": false,
         "name": "CRV / USDT 0.3%"
+      },
+      "0x4628a0a564debfc8798eb55db5c91f2200486c24": {
+        "first_seen": "2026-06-18T17:36:56.129836+00:00",
+        "last_tvl": 216087.2267,
+        "last_vol_24h": 134850.124300462,
+        "alerted_decline": false,
+        "name": "RNDR / WETH 0.3%"
       }
     }
   },
@@ -284,7 +299,7 @@
     "alerted_pools": {}
   },
   "raydium": {
-    "qualifying_count": 0,
+    "qualifying_count": 1,
     "alerted_pools": {
       "AHNN6JmvaGG6XUoSg7sEr38gRYDB2jTbUvqXVuqaRHpq": {
         "first_seen": "2026-06-17T20:05:29.798021+00:00",
@@ -313,6 +328,13 @@
         "last_vol_24h": 28423754.77551116,
         "alerted_decline": false,
         "name": "SPYx/USDC (0.01%)"
+      },
+      "DXWbip5LducMAbDSSpLYz9Xik3253EPeAYQufQtx7LXs": {
+        "first_seen": "2026-06-18T17:36:56.129836+00:00",
+        "last_tvl": 679686.95,
+        "last_vol_24h": 596080.7548664957,
+        "alerted_decline": false,
+        "name": "HOODx/USDC (1.00%)"
       }
     }
   }
