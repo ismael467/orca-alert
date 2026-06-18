@@ -12,8 +12,8 @@
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 24750.3722,
-        "last_vol_24h": 277708.49174943,
+        "last_tvl": 23912.0684,
+        "last_vol_24h": 224414.852086231,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
@@ -100,16 +100,16 @@
       "bsc_0x8afe2bb12382497134e8455355eb7f405f896681": {
         "first_seen": "2026-06-17T23:51:35.287683+00:00",
         "last_alert": "2026-06-17T23:51:35.287683+00:00",
-        "last_tvl": 7856.3502,
-        "last_vol_24h": 135307.092179621,
+        "last_tvl": 9529.9648,
+        "last_vol_24h": 186632.619099832,
         "alerted_decline": false,
         "name": "ESPORTS / WBNB 1%"
       },
       "bsc_0xb6ddc88a86f7fd5eae3bd5ecb0c0b244fee9db45": {
         "first_seen": "2026-06-18T02:05:52.619621+00:00",
         "last_alert": "2026-06-18T02:05:52.619621+00:00",
-        "last_tvl": 649.969,
-        "last_vol_24h": 206444.515081228,
+        "last_tvl": 610.8455,
+        "last_vol_24h": 206455.716805079,
         "alerted_decline": true,
         "name": "ESPORTS / USDC 1%"
       },
@@ -120,9 +120,17 @@
         "last_vol_24h": 37492988.9932263,
         "alerted_decline": false,
         "name": "ASTER / USDT 0.05%"
+      },
+      "bsc_0xf8c91b8ddd848ca1f4fb591e9459dc5777db5b39": {
+        "first_seen": "2026-06-18T14:23:37.894558+00:00",
+        "last_alert": "2026-06-18T14:23:37.894558+00:00",
+        "last_tvl": 47061.8146,
+        "last_vol_24h": 142560.059311492,
+        "alerted_decline": false,
+        "name": "BSB / USDT 0.25%"
       }
     },
-    "qualifying_count": 1
+    "qualifying_count": 4
   },
   "orca": {
     "qualifying_count": 3,
@@ -151,7 +159,7 @@
     }
   },
   "uniswap_arbitrum": {
-    "qualifying_count": 1,
+    "qualifying_count": 0,
     "alerted_pools": {
       "0xc24f7d8e51a64dc1238880bd00bb961d54cbeb29": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
@@ -177,26 +185,26 @@
     }
   },
   "uniswap_base": {
-    "qualifying_count": 0,
+    "qualifying_count": 3,
     "alerted_pools": {
       "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 201632.7553,
-        "last_vol_24h": 401976.037807877,
+        "last_tvl": 200542.9896,
+        "last_vol_24h": 311681.057342554,
         "alerted_decline": false,
         "name": "USDC / VVV 0.3%"
       },
       "0x6c561b446416e1a00e8e93e221854d6ea4171372": {
         "first_seen": "2026-06-17T16:27:04.219630+00:00",
-        "last_tvl": 100566113.8447,
-        "last_vol_24h": 120105749.450665,
+        "last_tvl": 100294267.9129,
+        "last_vol_24h": 119711442.406879,
         "alerted_decline": false,
         "name": "WETH / USDC 0.3%"
       },
       "0x529d2863a1521d0b57db028168fde2e97120017c": {
         "first_seen": "2026-06-17T16:27:04.219630+00:00",
-        "last_tvl": 835072.6652,
-        "last_vol_24h": 1494753.63570579,
+        "last_tvl": 840733.515,
+        "last_vol_24h": 1251457.01981014,
         "alerted_decline": false,
         "name": "VIRTUAL / USDC 0.3%"
       },
@@ -223,14 +231,14 @@
       }
     }
   },
-  "last_run": "2026-06-18T11:15:24.398365+00:00",
+  "last_run": "2026-06-18T14:23:37.894558+00:00",
   "uniswap_ethereum": {
-    "qualifying_count": 1,
+    "qualifying_count": 2,
     "alerted_pools": {
       "0xf763bb342eb3d23c02ccb86312422fe0c1c17e94": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 907429.187,
-        "last_vol_24h": 319404.990280075,
+        "last_tvl": 1050214.2988,
+        "last_vol_24h": 404276.672224848,
         "alerted_decline": false,
         "name": "wTAO / USDC 1%"
       },
@@ -261,6 +269,13 @@
         "last_vol_24h": 130394.369284513,
         "alerted_decline": false,
         "name": "WPRL / USDT 1%"
+      },
+      "0x07b1c12be0d62fe548a2b4b025ab7a5ca8def21e": {
+        "first_seen": "2026-06-18T14:23:37.894558+00:00",
+        "last_tvl": 765310.514,
+        "last_vol_24h": 353338.638050592,
+        "alerted_decline": false,
+        "name": "CRV / USDT 0.3%"
       }
     }
   },
