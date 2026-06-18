@@ -244,12 +244,16 @@ def _range_line(
     price_change_24h: float | None,
     day_volumes: list[float] | None = None,
     range_hist: dict | None = None,
+    apr: float | None = None,
 ) -> str:
     spike_count   = range_hist["spike_count"]   if range_hist else 0
     avg_spike_dur = range_hist["avg_spike_dur"] if range_hist else None
     if avg_spike_dur is None and day_volumes:
         avg_spike_dur = _avg_spike_days(day_volumes)
     dur_str = f"{avg_spike_dur:.1f} días" if avg_spike_dur is not None else "N/D"
+
+    low: float | None = None
+    high: float | None = None
 
     if spike_count >= 3 and range_hist:
         spike_prices = range_hist["spike_prices"]
@@ -277,7 +281,18 @@ def _range_line(
         else:
             pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
             range_str = pct_str
-    return f"📐 Rango sugerido: {range_str} | ⏱ Duración media spike: {dur_str}"
+
+    apr_line = ""
+    if low and high and price_base and price_base > 0 and apr is not None:
+        ancho = (high - low) / price_base
+        if ancho > 0:
+            apr_rango = apr / ancho
+            if apr_rango > 10_000:
+                apr_line = "\n⚠️ APR en rango: >10,000%"
+            else:
+                apr_line = f"\n💰 APR en rango: {apr_rango:,.0f}%"
+
+    return f"📐 Rango sugerido: {range_str} | ⏱ Duración media spike: {dur_str}{apr_line}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -503,6 +518,7 @@ def _build_new_alert(m: dict, label: str) -> str:
         pc,
         m.get("day_volumes"),
         m.get("range_hist"),
+        m.get("apr"),
     )
     return (
         f"{title}\n\n"
@@ -695,6 +711,7 @@ def _build_pancake_alert(m: dict) -> str:
         m.get("price_chg_h24"),
         None,
         m.get("range_hist"),
+        m.get("apr"),
     )
     return (
         f"🚨 <b>NUEVA OPORTUNIDAD{btcb_badge}</b>\n"
