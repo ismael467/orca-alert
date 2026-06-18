@@ -12,16 +12,16 @@
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 27102.6337,
-        "last_vol_24h": 234905.917963526,
+        "last_tvl": 27840.5011,
+        "last_vol_24h": 258106.114898776,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
       "bsc_0xb6bf78211bec35385dc663d37ea41118205c1303": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 70384.6084,
-        "last_vol_24h": 134944.828479397,
+        "last_tvl": 69823.0319,
+        "last_vol_24h": 129940.308200984,
         "alerted_decline": false,
         "name": "我踏马来了 / USDT 1%"
       },
@@ -36,9 +36,9 @@
       "bsc_0xefdd356e079343422cdeec868ec11a7e07e22d6e": {
         "first_seen": "2026-06-16T22:20:58.911355+00:00",
         "last_alert": "2026-06-16T22:20:58.911355+00:00",
-        "last_tvl": 50460.4397,
-        "last_vol_24h": 357953.061559247,
-        "alerted_decline": false,
+        "last_tvl": 400.6931,
+        "last_vol_24h": 287956.005704028,
+        "alerted_decline": true,
         "name": "USELESS / WBNB 0.25%"
       },
       "bsc_0x3d7da1ff0dbc756f21d9aeaddf16c9c0703bad40": {
@@ -76,9 +76,9 @@
       "bsc_0xb040ea24a4ef35a3ed400b0ff26d8b6f30deecad": {
         "first_seen": "2026-06-17T18:02:03.751262+00:00",
         "last_alert": "2026-06-17T18:02:03.751262+00:00",
-        "last_tvl": 3152537.5533,
-        "last_vol_24h": 11090178.2187029,
-        "alerted_decline": false,
+        "last_tvl": 1233807.5951,
+        "last_vol_24h": 12663378.967779,
+        "alerted_decline": true,
         "name": "ASTER / WBNB 0.25%"
       },
       "bsc_0xb9c4a7e2fb2c9410d3de0cba43d1c4031c2524b4": {
@@ -92,21 +92,37 @@
       "bsc_0x5e3f597249a5714eb3df94e08b4eb6da387548ed": {
         "first_seen": "2026-06-17T19:08:49.893313+00:00",
         "last_alert": "2026-06-17T19:08:49.893313+00:00",
-        "last_tvl": 55083.3312,
-        "last_vol_24h": 177025.237463358,
+        "last_tvl": 56890.3419,
+        "last_vol_24h": 240274.23128981,
         "alerted_decline": false,
         "name": "Broccoli / WBNB 0.25%"
       },
       "bsc_0x8afe2bb12382497134e8455355eb7f405f896681": {
         "first_seen": "2026-06-17T23:51:35.287683+00:00",
         "last_alert": "2026-06-17T23:51:35.287683+00:00",
-        "last_tvl": 7088.0523,
-        "last_vol_24h": 66138.7032789874,
+        "last_tvl": 7972.7314,
+        "last_vol_24h": 86180.5262656706,
         "alerted_decline": false,
         "name": "ESPORTS / WBNB 1%"
+      },
+      "bsc_0xb6ddc88a86f7fd5eae3bd5ecb0c0b244fee9db45": {
+        "first_seen": "2026-06-18T02:05:52.619621+00:00",
+        "last_alert": "2026-06-18T02:05:52.619621+00:00",
+        "last_tvl": 16422.7251,
+        "last_vol_24h": 97295.4717496375,
+        "alerted_decline": false,
+        "name": "ESPORTS / USDC 1%"
+      },
+      "bsc_0x7e58f160b5b77b8b24cd9900c09a3e730215ac47": {
+        "first_seen": "2026-06-18T02:05:52.619621+00:00",
+        "last_alert": "2026-06-18T02:05:52.619621+00:00",
+        "last_tvl": 1310737.9596,
+        "last_vol_24h": 36361722.4319307,
+        "alerted_decline": false,
+        "name": "ASTER / USDT 0.05%"
       }
     },
-    "qualifying_count": 5
+    "qualifying_count": 8
   },
   "orca": {
     "qualifying_count": 3,
@@ -135,7 +151,7 @@
     }
   },
   "uniswap_arbitrum": {
-    "qualifying_count": 2,
+    "qualifying_count": 1,
     "alerted_pools": {
       "0xc24f7d8e51a64dc1238880bd00bb961d54cbeb29": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
@@ -153,20 +169,20 @@
       },
       "0x97bca422ec0ee4851f2110ea743c1cd0a14835a1": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 346062.0849,
-        "last_vol_24h": 776285.633935901,
+        "last_tvl": 350890.5159,
+        "last_vol_24h": 755545.00632702,
         "alerted_decline": false,
         "name": "ARB / USDT 0.3%"
       }
     }
   },
   "uniswap_base": {
-    "qualifying_count": 2,
+    "qualifying_count": 1,
     "alerted_pools": {
       "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
-        "last_tvl": 205525.4517,
-        "last_vol_24h": 465729.360578553,
+        "last_tvl": 206027.5804,
+        "last_vol_24h": 452080.342154245,
         "alerted_decline": false,
         "name": "USDC / VVV 0.3%"
       },
@@ -207,9 +223,9 @@
       }
     }
   },
-  "last_run": "2026-06-17T23:51:35.287683+00:00",
+  "last_run": "2026-06-18T02:05:52.619621+00:00",
   "uniswap_ethereum": {
-    "qualifying_count": 0,
+    "qualifying_count": 1,
     "alerted_pools": {
       "0xf763bb342eb3d23c02ccb86312422fe0c1c17e94": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
@@ -238,6 +254,13 @@
         "last_vol_24h": 142733.462444734,
         "alerted_decline": false,
         "name": "LINK / USDT 0.3%"
+      },
+      "0x89a67c6dee35db9815da2fb9191f0998a8b37c39": {
+        "first_seen": "2026-06-18T02:05:52.619621+00:00",
+        "last_tvl": 215659.6498,
+        "last_vol_24h": 162666.610931293,
+        "alerted_decline": false,
+        "name": "WPRL / USDT 1%"
       }
     }
   },
@@ -264,10 +287,17 @@
       },
       "w7SGmPeXoMCsjvXqgsAmUn56uypyDsjAtsxeVkaiqxa": {
         "first_seen": "2026-06-17T20:05:29.798021+00:00",
-        "last_tvl": 328791.23,
-        "last_vol_24h": 354652.8210386593,
+        "last_tvl": 328983.12,
+        "last_vol_24h": 323140.12339494674,
         "alerted_decline": false,
         "name": "COINx/USDC (0.80%)"
+      },
+      "4pCZCVEiYyT4efNdXUdL2tJF8VGMgiMXrZWq6FiNXhRw": {
+        "first_seen": "2026-06-18T02:05:52.619621+00:00",
+        "last_tvl": 215038.72,
+        "last_vol_24h": 18585327.876040623,
+        "alerted_decline": false,
+        "name": "SPYx/USDC (0.01%)"
       }
     }
   }
