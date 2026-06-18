@@ -266,6 +266,97 @@ def _range_line(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# RSI helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _calc_rsi(closes: list[float], period: int = 14) -> float | None:
+    if len(closes) < period + 1:
+        return None
+    deltas   = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+    gains    = [max(d, 0.0) for d in deltas]
+    losses   = [max(-d, 0.0) for d in deltas]
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    for i in range(period, len(deltas)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+    if avg_loss == 0:
+        return 100.0
+    return 100.0 - (100.0 / (1.0 + avg_gain / avg_loss))
+
+
+def _fetch_rsi(cg_id: str | None, symbol: str, cache: dict) -> float | None:
+    if not symbol:
+        return None
+    key = cg_id or symbol.upper()
+    if key in cache:
+        return cache[key]
+
+    closes: list[float] = []
+
+    if cg_id:
+        url = (
+            "https://api.coingecko.com/api/v3/coins"
+            f"/{cg_id}/ohlc?vs_currency=usd&days=14"
+        )
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, timeout=20)
+                if resp.status_code == 429:
+                    print(f"[RSI/CoinGecko] rate limit — waiting 15s…")
+                    time.sleep(15)
+                    continue
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data:
+                        closes = [float(row[4]) for row in data]
+                break
+            except Exception as exc:
+                print(f"[RSI/CoinGecko] {exc}")
+                if attempt < 2:
+                    time.sleep(2)
+
+    if not closes:
+        sym_upper = symbol.upper()
+        for quote in ("USDT", "USDC", "BUSD"):
+            try:
+                url = (
+                    "https://api.binance.com/api/v3/klines"
+                    f"?symbol={sym_upper}{quote}&interval=1d&limit=15"
+                )
+                resp = requests.get(url, timeout=15)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data:
+                        closes = [float(row[4]) for row in data]
+                    break
+            except Exception as exc:
+                print(f"[RSI/Binance] {sym_upper}{quote}: {exc}")
+
+    rsi = _calc_rsi(closes) if closes else None
+    cache[key] = rsi
+    return rsi
+
+
+def _rsi_line(rsi: float | None) -> str:
+    if rsi is None:
+        return "📊 RSI: N/D"
+    v = f"{rsi:.0f}"
+    if rsi < 30:
+        return f"📊 RSI: {v} — 🟢 Buena entrada (sobrevendido)"
+    if rsi < 50:
+        return f"📊 RSI: {v} — 🟡 Entrada aceptable (momentum bajista)"
+    if rsi < 70:
+        return f"📊 RSI: {v} — 🟠 Precaución (momentum alcista)"
+    return f"📊 RSI: {v} — 🔴 Evitar (sobrecomprado)"
+
+
+def _enrich_rsi(qualifying: list[dict], rsi_cache: dict) -> None:
+    for m in qualifying:
+        m["rsi"] = _fetch_rsi(m.get("cg_id_main"), m.get("sym_main", ""), rsi_cache)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CoinGecko top-N (fetched once per run, shared by all new sources)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -330,7 +421,7 @@ def _build_new_alert(m: dict, label: str) -> str:
         f"{pc_line}"
     ).rstrip()
     title = m.get("alert_title") or f"🚨 NUEVA OPORTUNIDAD — {label} {m['badge']}"
-    rng   = _range_line(
+    rng = _range_line(
         m.get("sym_a", "?"),
         m.get("sym_b", "?"),
         m.get("price_base"),
@@ -340,7 +431,8 @@ def _build_new_alert(m: dict, label: str) -> str:
     return (
         f"{title}\n\n"
         f"<pre>{body}</pre>\n\n"
-        f"{rng}\n\n"
+        f"{rng}\n"
+        f"{_rsi_line(m.get('rsi'))}\n\n"
         f"🔗 {m['pool_url']}"
     )
 
@@ -483,6 +575,9 @@ def _compute_pancake_metrics(pool: dict) -> dict | None:
     sym_a      = _sm.group(1).strip() if _sm else "?"
     sym_b      = _sm.group(2).strip() if _sm else "?"
     price_base = float(attr.get("base_token_price_usd") or 0) or None
+    _a_stable  = sym_a.lower() in STABLE_SYMBOLS
+    cg_id_main = None
+    sym_main   = sym_a if not _a_stable else (sym_b if sym_b.lower() not in STABLE_SYMBOLS else "")
     return {
         "pool_id":       pool["id"],
         "address":       attr["address"],
@@ -500,6 +595,8 @@ def _compute_pancake_metrics(pool: dict) -> dict | None:
         "sym_a":         sym_a,
         "sym_b":         sym_b,
         "price_base":    price_base,
+        "cg_id_main":    cg_id_main,
+        "sym_main":      sym_main,
     }
 
 
@@ -532,6 +629,7 @@ def _build_pancake_alert(m: dict) -> str:
         f"<b>Precio Δ1h:</b> {m['price_chg_h1']:+.2f}%  "
         f"<b>Δ24h:</b> {m['price_chg_h24']:+.2f}%\n"
         f"{rng}\n"
+        f"{_rsi_line(m.get('rsi'))}\n"
         f"🔗 <a href='https://pancakeswap.finance/info/v3/pairs/{m['address']}'>PancakeSwap V3</a>"
     )
 
@@ -548,7 +646,7 @@ def _build_pancake_decline(m: dict, reason: str, prev_tvl: float, prev_vol: floa
     )
 
 
-def run_pancakeswap(ns_state: dict, now_iso: str) -> int:
+def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict) -> int:
     print("[PancakeSwap] Fetching pools…")
     raw_pools = _fetch_pancake_pools()
     print(f"[PancakeSwap] Fetched {len(raw_pools)} pools")
@@ -561,6 +659,7 @@ def run_pancakeswap(ns_state: dict, now_iso: str) -> int:
 
     qualifying.sort(key=lambda x: (-int(x["is_btcb"]), -x["apr"]))
     print(f"[PancakeSwap] {len(qualifying)} pools pass filters")
+    _enrich_rsi(qualifying, rsi_cache)
 
     alerted: dict = ns_state.setdefault("alerted_pools", {})
     alerts_sent = 0
@@ -650,6 +749,14 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
             break
 
     price_base = float(token_a.get("usdPrice") or 0) or None
+    _a_stable  = sym_a.lower() in STABLE_SYMBOLS
+    _b_stable  = sym_b.lower() in STABLE_SYMBOLS
+    if not _a_stable:
+        cg_id_main, sym_main = cg_a or None, sym_a
+    elif not _b_stable:
+        cg_id_main, sym_main = cg_b or None, sym_b
+    else:
+        cg_id_main, sym_main = None, ""
     fee_pct    = fee_rate * 100
     name       = f"{sym_a}/{sym_b} ({fee_pct:.2f}%)"
 
@@ -670,10 +777,12 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
         "sym_b":            sym_b,
         "price_base":       price_base,
         "day_volumes":      None,
+        "cg_id_main":       cg_id_main,
+        "sym_main":         sym_main,
     }
 
 
-def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
+def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict) -> int:
     print("[Orca] Fetching whirlpools…")
     pools = _fetch_orca_pools()
     print(f"[Orca] Fetched {len(pools)} pools")
@@ -686,6 +795,7 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[Orca] {len(qualifying)} pools pass filters")
+    _enrich_rsi(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, "ORCA", ns_state, now_iso)
 
@@ -801,6 +911,14 @@ def _compute_uniswap_metrics(
     sym_a      = _sm.group(1).strip() if _sm else "?"
     sym_b      = _sm.group(2).strip() if _sm else "?"
     price_base = float(attr.get("base_token_price_usd") or 0) or None
+    _a_stable  = sym_a.lower() in STABLE_SYMBOLS
+    _b_stable  = sym_b.lower() in STABLE_SYMBOLS
+    if not _a_stable:
+        cg_id_main, sym_main = base_cg or None, sym_a
+    elif not _b_stable:
+        cg_id_main, sym_main = quote_cg or None, sym_b
+    else:
+        cg_id_main, sym_main = None, ""
 
     cfg      = UNISWAP_NETWORKS[chain]
     pool_url = cfg["app_url"].format(addr=attr["address"])
@@ -821,6 +939,8 @@ def _compute_uniswap_metrics(
         "sym_b":            sym_b,
         "price_base":       price_base,
         "day_volumes":      None,
+        "cg_id_main":       cg_id_main,
+        "sym_main":         sym_main,
     }
 
 
@@ -829,6 +949,7 @@ def run_uniswap(
     ns_state: dict,
     now_iso: str,
     top_coins: dict[str, dict],
+    rsi_cache: dict,
 ) -> int:
     label = UNISWAP_NETWORKS[chain]["label"]
     print(f"[{label}] Fetching pools from GeckoTerminal…")
@@ -844,6 +965,7 @@ def run_uniswap(
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
+    _enrich_rsi(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -914,7 +1036,10 @@ def _compute_projectx_metrics(
     fee_pct_str = f"{fee_bps / 10_000:.2f}%"
     name        = f"{sym0}/{sym1} ({fee_pct_str})"
 
-    all_vols = [float(d.get("volumeUSD") or 0) for d in day_data]
+    all_vols   = [float(d.get("volumeUSD") or 0) for d in day_data]
+    _a_stable  = sym0.lower() in STABLE_SYMBOLS
+    cg_id_main = None
+    sym_main   = sym0 if not _a_stable else (sym1 if sym1.lower() not in STABLE_SYMBOLS else "")
 
     return {
         "address":          pool["id"],
@@ -932,10 +1057,12 @@ def _compute_projectx_metrics(
         "sym_b":            sym1,
         "price_base":       None,
         "day_volumes":      all_vols if len(all_vols) >= 3 else None,
+        "cg_id_main":       cg_id_main,
+        "sym_main":         sym_main,
     }
 
 
-def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
+def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict) -> int:
     label = "PROJECTX HYPERLIQUID"
     print(f"[{label}] Querying Goldsky subgraph…")
     data = _graphql_post(PROJECTX_GRAPHQL, _PROJECTX_QUERY)
@@ -955,6 +1082,7 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> in
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
+    _enrich_rsi(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -1015,6 +1143,9 @@ def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | N
 
     price_base_raw = mint_a.get("price") or pool.get("price")
     price_base     = float(price_base_raw) if price_base_raw else None
+    _a_stable      = sym_a.lower() in STABLE_SYMBOLS
+    cg_id_main     = None
+    sym_main       = sym_a if not _a_stable else (sym_b if sym_b.lower() not in STABLE_SYMBOLS else "")
 
     fee_pct = float(pool.get("feeRate") or 0) * 100
     name    = f"{sym_a}/{sym_b} ({fee_pct:.2f}%)"
@@ -1036,10 +1167,12 @@ def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | N
         "sym_b":            sym_b,
         "price_base":       price_base,
         "day_volumes":      None,
+        "cg_id_main":       cg_id_main,
+        "sym_main":         sym_main,
     }
 
 
-def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int:
+def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict) -> int:
     label = "RAYDIUM"
     print(f"[{label}] Fetching concentrated pools…")
     pools = _fetch_raydium_pools()
@@ -1051,6 +1184,7 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict]) -> int
             qualifying.append(m)
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
+    _enrich_rsi(qualifying, rsi_cache)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -1069,19 +1203,20 @@ def main() -> None:
     top_coins = fetch_top_coins(TOP_N_COINS)
     print(f"[CoinGecko] Loaded {len(top_coins)} coins")
 
-    total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso)
+    rsi_cache: dict = {}
+    total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso, rsi_cache)
     time.sleep(3)
-    total += run_orca(state.setdefault("orca", {}), now_iso, top_coins)
+    total += run_orca(state.setdefault("orca", {}), now_iso, top_coins, rsi_cache)
     time.sleep(3)
-    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins)
+    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins, rsi_cache)
     time.sleep(3)
-    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins)
+    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, rsi_cache)
     time.sleep(3)
-    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins)
+    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, rsi_cache)
     time.sleep(3)
-    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins)
+    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache)
     time.sleep(3)
-    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins)
+    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache)
 
     state["last_run"] = now_iso
     save_state(state)
