@@ -310,7 +310,7 @@ def _fetch_rsi(cg_id: str | None, symbol: str, cache: dict) -> float | None:
                     data = resp.json()
                     if data:
                         closes = [float(row[4]) for row in data]
-                break
+                    break
             except Exception as exc:
                 print(f"[RSI/CoinGecko] {exc}")
                 if attempt < 2:
@@ -322,7 +322,7 @@ def _fetch_rsi(cg_id: str | None, symbol: str, cache: dict) -> float | None:
             try:
                 url = (
                     "https://api.binance.com/api/v3/klines"
-                    f"?symbol={sym_upper}{quote}&interval=1d&limit=15"
+                    f"?symbol={sym_upper}{quote}&interval=1d&limit=50"
                 )
                 resp = requests.get(url, timeout=15)
                 if resp.status_code == 200:
