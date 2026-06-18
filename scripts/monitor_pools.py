@@ -21,7 +21,7 @@ import json
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -395,7 +395,7 @@ def _vol_tvl_line(vol_24h: float, tvl: float) -> str:
     return f"📊 Vol/TVL: {ratio:.2f}{fire}"
 
 
-def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, rsi: float | None) -> str:
+def _lp_score(vol_24h: float, tvl: float, volume_spike: float | None, rsi: float | None) -> int:
     score = 0.0
     if tvl > 0:
         score += min(40.0, (vol_24h / tvl) * 20.0)
@@ -405,9 +405,71 @@ def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, rsi: 
         score += 20.0
     if tvl >= 500_000:
         score += 10.0
-    s = int(min(100, score))
+    return int(min(100, score))
+
+
+def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, rsi: float | None) -> str:
+    s = _lp_score(vol_24h, tvl, volume_spike, rsi)
     emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
     return f"{emoji} LP Score: {s}/100"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TOP 5 summary helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _summary_slot_id(dt: datetime) -> str:
+    return f"{dt.date()}T{(dt.hour // 8) * 8:02d}"
+
+
+def _should_send_summary(state: dict, now_utc: datetime) -> bool:
+    if now_utc.hour not in (0, 8, 16):
+        return False
+    return state.get("last_summary_slot") != _summary_slot_id(now_utc)
+
+
+def _build_top5_summary(pool_cache: dict, now_utc: datetime) -> str:
+    pools = sorted(pool_cache.values(), key=lambda x: x.get("lp_score", 0), reverse=True)[:5]
+    medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+    sep = "━" * 22
+    lines = []
+    for i, p in enumerate(pools):
+        s = p.get("lp_score", 0)
+        score_emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
+        rsi_val = p.get("rsi")
+        rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
+        lines.append(
+            f"{medals[i]} {p['name']} — {score_emoji} {s}/100\n"
+            f"   APR: {p['apr']:,.0f}% | Fees/día ($1K): ${p.get('fees_day_1k', 0):.2f} | RSI: {rsi_str}"
+        )
+    body = "\n".join(lines) if lines else "Sin pools detectadas aún."
+    date_str = f"{now_utc.day} {now_utc.strftime('%b')}"
+    time_str = now_utc.strftime("%H:%M")
+    return (
+        f"{sep}\n🏆 TOP 5 — LP SNIPER\n{sep}\n"
+        f"{body}\n"
+        f"{sep}\n"
+        f"📅 {date_str} | ⏰ {time_str} UTC"
+    )
+
+
+def _update_pool_cache(pool_cache: dict, qualifying: list[dict], now_iso: str) -> None:
+    for m in qualifying:
+        pid = m.get("pool_id", "")
+        if not pid:
+            continue
+        tvl = m.get("tvl", 0)
+        pool_cache[pid] = {
+            "name":        m.get("name", ""),
+            "apr":         m.get("apr", 0),
+            "fees_day_1k": (1_000 / tvl) * m.get("fees_24h", 0) if tvl > 0 else 0,
+            "rsi":         m.get("rsi"),
+            "lp_score":    _lp_score(m.get("vol_24h", 0), tvl, m.get("volume_spike"), m.get("rsi")),
+            "last_seen":   now_iso,
+        }
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    for k in [k for k, v in pool_cache.items() if v.get("last_seen", "") < cutoff]:
+        del pool_cache[k]
 
 
 def _enrich_rsi(qualifying: list[dict], rsi_cache: dict) -> None:
@@ -776,7 +838,7 @@ def _build_pancake_decline(m: dict, reason: str, prev_tvl: float, prev_vol: floa
     )
 
 
-def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict) -> int:
+def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifying: list) -> int:
     print("[PancakeSwap] Fetching pools…")
     raw_pools = _fetch_pancake_pools()
     print(f"[PancakeSwap] Fetched {len(raw_pools)} pools")
@@ -791,6 +853,7 @@ def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict) -> int:
     print(f"[PancakeSwap] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
     _enrich_range(qualifying, rsi_cache)
+    all_qualifying.extend(qualifying)
 
     alerted: dict = ns_state.setdefault("alerted_pools", {})
     alerts_sent = 0
@@ -913,7 +976,7 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
     }
 
 
-def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict) -> int:
+def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list) -> int:
     print("[Orca] Fetching whirlpools…")
     pools = _fetch_orca_pools()
     print(f"[Orca] Fetched {len(pools)} pools")
@@ -928,6 +991,7 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache
     print(f"[Orca] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
     _enrich_range(qualifying, rsi_cache)
+    all_qualifying.extend(qualifying)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, "ORCA", ns_state, now_iso)
 
@@ -1082,6 +1146,7 @@ def run_uniswap(
     now_iso: str,
     top_coins: dict[str, dict],
     rsi_cache: dict,
+    all_qualifying: list,
 ) -> int:
     label = UNISWAP_NETWORKS[chain]["label"]
     print(f"[{label}] Fetching pools from GeckoTerminal…")
@@ -1099,6 +1164,7 @@ def run_uniswap(
     print(f"[{label}] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
     _enrich_range(qualifying, rsi_cache)
+    all_qualifying.extend(qualifying)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -1195,7 +1261,7 @@ def _compute_projectx_metrics(
     }
 
 
-def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict) -> int:
+def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list) -> int:
     label = "PROJECTX HYPERLIQUID"
     print(f"[{label}] Querying Goldsky subgraph…")
     data = _graphql_post(PROJECTX_GRAPHQL, _PROJECTX_QUERY)
@@ -1217,6 +1283,7 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_c
     print(f"[{label}] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
     _enrich_range(qualifying, rsi_cache)
+    all_qualifying.extend(qualifying)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -1306,7 +1373,7 @@ def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | N
     }
 
 
-def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict) -> int:
+def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list) -> int:
     label = "RAYDIUM"
     print(f"[{label}] Fetching concentrated pools…")
     pools = _fetch_raydium_pools()
@@ -1320,6 +1387,7 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
     print(f"[{label}] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
     _enrich_range(qualifying, rsi_cache)
+    all_qualifying.extend(qualifying)
     ns_state["qualifying_count"] = len(qualifying)
     return _process_new_source(qualifying, label, ns_state, now_iso)
 
@@ -1329,29 +1397,43 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_utc = datetime.now(timezone.utc)
+    now_iso = now_utc.isoformat()
     state   = load_state()
     total   = 0
+
+    # TOP 5 summary — once every 8h at 00:00, 08:00, 16:00 UTC
+    pool_cache: dict = state.setdefault("pool_cache", {})
+    if _should_send_summary(state, now_utc):
+        if pool_cache:
+            send_telegram(_build_top5_summary(pool_cache, now_utc))
+            print("[Summary] TOP 5 sent")
+        else:
+            print("[Summary] No pool cache yet, skipping")
+        state["last_summary_slot"] = _summary_slot_id(now_utc)
 
     # Fetch CoinGecko top-N once; shared by Orca + Uniswap
     print(f"[CoinGecko] Fetching top-{TOP_N_COINS} coins…")
     top_coins = fetch_top_coins(TOP_N_COINS)
     print(f"[CoinGecko] Loaded {len(top_coins)} coins")
 
-    rsi_cache: dict = {}
-    total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso, rsi_cache)
+    rsi_cache:     dict       = {}
+    all_qualifying: list[dict] = []
+    total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso, rsi_cache, all_qualifying)
     time.sleep(3)
-    total += run_orca(state.setdefault("orca", {}), now_iso, top_coins, rsi_cache)
+    total += run_orca(state.setdefault("orca", {}), now_iso, top_coins, rsi_cache, all_qualifying)
     time.sleep(3)
-    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins, rsi_cache)
+    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins, rsi_cache, all_qualifying)
     time.sleep(3)
-    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, rsi_cache)
+    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, rsi_cache, all_qualifying)
     time.sleep(3)
-    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, rsi_cache)
+    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, rsi_cache, all_qualifying)
     time.sleep(3)
-    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache)
+    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache, all_qualifying)
     time.sleep(3)
-    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache)
+    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache, all_qualifying)
+
+    _update_pool_cache(pool_cache, all_qualifying, now_iso)
 
     state["last_run"] = now_iso
     save_state(state)
