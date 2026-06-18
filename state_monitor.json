@@ -12,8 +12,8 @@
       "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
         "first_seen": "2026-06-16T20:09:19.015700+00:00",
         "last_alert": "2026-06-16T20:09:19.015700+00:00",
-        "last_tvl": 23742.3183,
-        "last_vol_24h": 216018.413130778,
+        "last_tvl": 22812.3849,
+        "last_vol_24h": 242212.421666542,
         "alerted_decline": false,
         "name": "SIREN / USDC 0.25%"
       },
@@ -100,15 +100,15 @@
       "bsc_0x8afe2bb12382497134e8455355eb7f405f896681": {
         "first_seen": "2026-06-17T23:51:35.287683+00:00",
         "last_alert": "2026-06-17T23:51:35.287683+00:00",
-        "last_tvl": 9292.9163,
-        "last_vol_24h": 205791.203347272,
+        "last_tvl": 6996.1446,
+        "last_vol_24h": 209300.944526538,
         "alerted_decline": false,
         "name": "ESPORTS / WBNB 1%"
       },
       "bsc_0xb6ddc88a86f7fd5eae3bd5ecb0c0b244fee9db45": {
         "first_seen": "2026-06-18T02:05:52.619621+00:00",
         "last_alert": "2026-06-18T02:05:52.619621+00:00",
-        "last_tvl": 596.9417,
+        "last_tvl": 601.0713,
         "last_vol_24h": 206455.716805079,
         "alerted_decline": true,
         "name": "ESPORTS / USDC 1%"
@@ -138,7 +138,7 @@
         "name": "4 / WBNB 0.25%"
       }
     },
-    "qualifying_count": 0
+    "qualifying_count": 3
   },
   "orca": {
     "qualifying_count": 3,
@@ -193,7 +193,7 @@
     }
   },
   "uniswap_base": {
-    "qualifying_count": 2,
+    "qualifying_count": 0,
     "alerted_pools": {
       "0x67a11022b7b6ed66f81233f6c8ed6e48f7826530": {
         "first_seen": "2026-06-17T16:11:21.003437+00:00",
@@ -239,7 +239,7 @@
       }
     }
   },
-  "last_run": "2026-06-18T19:51:04.540074+00:00",
+  "last_run": "2026-06-18T21:52:55.941415+00:00",
   "uniswap_ethereum": {
     "qualifying_count": 0,
     "alerted_pools": {
@@ -331,11 +331,37 @@
       },
       "DXWbip5LducMAbDSSpLYz9Xik3253EPeAYQufQtx7LXs": {
         "first_seen": "2026-06-18T17:36:56.129836+00:00",
-        "last_tvl": 679149.41,
-        "last_vol_24h": 590701.3624715703,
+        "last_tvl": 680736.19,
+        "last_vol_24h": 593337.9891697759,
         "alerted_decline": false,
         "name": "HOODx/USDC (1.00%)"
       }
+    }
+  },
+  "pool_cache": {
+    "bsc_0xb6ddc88a86f7fd5eae3bd5ecb0c0b244fee9db45": {
+      "name": "ESPORTS / USDC 1%",
+      "apr": 125370.04617231574,
+      "fees_day_1k": 3434.795785542897,
+      "rsi": null,
+      "lp_score": 40,
+      "last_seen": "2026-06-18T21:52:55.941415+00:00"
+    },
+    "bsc_0x8afe2bb12382497134e8455355eb7f405f896681": {
+      "name": "ESPORTS / WBNB 1%",
+      "apr": 10919.563433864183,
+      "fees_day_1k": 299.1661214757311,
+      "rsi": null,
+      "lp_score": 40,
+      "last_seen": "2026-06-18T21:52:55.941415+00:00"
+    },
+    "bsc_0x3868851b2f2da5bc07c9866407f4e98b68c16f14": {
+      "name": "SIREN / USDC 0.25%",
+      "apr": 1320.4101275461026,
+      "fees_day_1k": 36.17561993276994,
+      "rsi": null,
+      "lp_score": 40,
+      "last_seen": "2026-06-18T21:52:55.941415+00:00"
     }
   }
 }
