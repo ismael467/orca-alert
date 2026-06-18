@@ -381,6 +381,35 @@ def _rsi_line(rsi: float | None) -> str:
     return f"📊 RSI: {v} — 🔴 Evitar (sobrecomprado)"
 
 
+def _fees_day_1k_line(tvl: float, fees_24h: float) -> str:
+    if tvl <= 0:
+        return "💵 Fees/día ($1K): N/D"
+    return f"💵 Fees/día ($1K): ${(1_000 / tvl) * fees_24h:.2f}"
+
+
+def _vol_tvl_line(vol_24h: float, tvl: float) -> str:
+    if tvl <= 0:
+        return "📊 Vol/TVL: N/D"
+    ratio = vol_24h / tvl
+    fire = " 🔥" if ratio > 1 else ""
+    return f"📊 Vol/TVL: {ratio:.2f}{fire}"
+
+
+def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, rsi: float | None) -> str:
+    score = 0.0
+    if tvl > 0:
+        score += min(40.0, (vol_24h / tvl) * 20.0)
+    if volume_spike is not None:
+        score += min(30.0, volume_spike * 10.0)
+    if rsi is not None and rsi < 50:
+        score += 20.0
+    if tvl >= 500_000:
+        score += 10.0
+    s = int(min(100, score))
+    emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
+    return f"{emoji} LP Score: {s}/100"
+
+
 def _enrich_rsi(qualifying: list[dict], rsi_cache: dict) -> None:
     for m in qualifying:
         m["rsi"] = _fetch_rsi(m.get("cg_id_main"), m.get("sym_main", ""), rsi_cache)
@@ -524,7 +553,10 @@ def _build_new_alert(m: dict, label: str) -> str:
         f"{title}\n\n"
         f"<pre>{body}</pre>\n\n"
         f"{rng}\n"
-        f"{_rsi_line(m.get('rsi'))}\n\n"
+        f"{_rsi_line(m.get('rsi'))}\n"
+        f"{_fees_day_1k_line(m['tvl'], m['fees_24h'])}\n"
+        f"{_vol_tvl_line(m['vol_24h'], m['tvl'])}\n"
+        f"{_lp_score_line(m['vol_24h'], m['tvl'], m.get('volume_spike'), m.get('rsi'))}\n\n"
         f"🔗 {m['pool_url']}"
     )
 
@@ -725,6 +757,9 @@ def _build_pancake_alert(m: dict) -> str:
         f"<b>Δ24h:</b> {m['price_chg_h24']:+.2f}%\n"
         f"{rng}\n"
         f"{_rsi_line(m.get('rsi'))}\n"
+        f"{_fees_day_1k_line(m['tvl'], m['fees_24h'])}\n"
+        f"{_vol_tvl_line(m['vol_24h'], m['tvl'])}\n"
+        f"{_lp_score_line(m['vol_24h'], m['tvl'], m.get('volume_spike'), m.get('rsi'))}\n"
         f"🔗 <a href='https://pancakeswap.finance/info/v3/pairs/{m['address']}'>PancakeSwap V3</a>"
     )
 
