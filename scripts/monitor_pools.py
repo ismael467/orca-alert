@@ -65,6 +65,13 @@ NEW_PRICE_MAX  =  20.0   # %
 NEW_SPIKE_MIN  =   2.0   # × 6-day average
 TOP_N_COINS    = 100
 
+TOP20_TOKENS = {
+    "BTC","WBTC","ETH","WETH","SOL","WSOL","BNB","WBNB","XRP","ADA",
+    "AVAX","DOT","MATIC","LINK","UNI","ATOM","LTC","BCH","USDC","USDT",
+}
+BLUECHIP_MIN_TVL = 100_000
+BLUECHIP_MIN_APR = 100.0
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Orca
 # ─────────────────────────────────────────────────────────────────────────────
@@ -453,18 +460,115 @@ def _build_top5_summary(pool_cache: dict, now_utc: datetime) -> str:
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# TOP 3 DIARIO helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _should_send_daily_top3(state: dict, now_utc: datetime) -> bool:
+    if not (now_utc.hour == 12 and now_utc.minute <= 30):
+        return False
+    return state.get("last_daily_top3_date") != str(now_utc.date())
+
+
+def _build_top3_daily(pool_cache: dict, now_utc: datetime) -> str:
+    pools = sorted(pool_cache.values(), key=lambda x: x.get("lp_score", 0), reverse=True)[:3]
+    medals = ["🥇", "🥈", "🥉"]
+    sep = "━" * 22
+    lines = []
+    for i, p in enumerate(pools):
+        s = p.get("lp_score", 0)
+        score_emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
+        rsi_val = p.get("rsi")
+        rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
+        apr_rango = p.get("apr_rango")
+        apr_rango_str = f"{apr_rango:,.0f}%" if apr_rango is not None else "N/D"
+        vol_tvl = p.get("vol_tvl")
+        vol_tvl_str = f"{vol_tvl:.2f}x" if vol_tvl is not None else "N/D"
+        source = p.get("source", "")
+        lines.append(
+            f"{medals[i]} {p['name']}" + (f" · {source}" if source else "") + "\n"
+            f"   APR: {p['apr']:,.0f}% | APR rango: {apr_rango_str}\n"
+            f"   Fees/día ($1K): ${p.get('fees_day_1k', 0):.2f} | Vol/TVL: {vol_tvl_str}\n"
+            f"   RSI: {rsi_str} | {score_emoji} LP Score: {s}/100"
+        )
+    body = "\n\n".join(lines) if lines else "Sin pools detectadas aún."
+    date_str = now_utc.strftime("%d %b %Y")
+    return (
+        f"{sep}\n📊 TOP 3 DIARIO — LP SNIPER\n{sep}\n"
+        f"{body}\n"
+        f"{sep}\n"
+        f"📅 {date_str} UTC"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BLUECHIP stable pool helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _is_bluechip(m: dict) -> bool:
+    return (
+        m.get("sym_a", "").upper() in TOP20_TOKENS
+        and m.get("sym_b", "").upper() in TOP20_TOKENS
+    )
+
+
+def _passes_bluechip_filters(m: dict) -> bool:
+    return m.get("tvl", 0) >= BLUECHIP_MIN_TVL and m.get("apr", 0) >= BLUECHIP_MIN_APR
+
+
+def _build_bluechip_alert(m: dict) -> str:
+    source = m.get("_source", "DEX")
+    apr = m.get("apr", 0)
+    apr_rango_fixed = apr / 0.20
+    rsi_val = m.get("rsi")
+    rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
+    rsi_emoji = "🔵" if rsi_val is None else ("🟢" if rsi_val < 45 else ("🟡" if rsi_val < 60 else "🔴"))
+    lp_score = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("volume_spike"), rsi_val)
+    lp_emoji = "🟢" if lp_score >= 70 else ("🟡" if lp_score >= 50 else "🔴")
+    return (
+        f"🔵 <b>OPORTUNIDAD ESTABLE</b> — {source}\n"
+        f"<b>Pool:</b> {m['name']}\n"
+        f"<b>APR:</b> {apr:,.0f}%\n"
+        f"<b>APR rango ±10%:</b> {apr_rango_fixed:,.0f}%\n"
+        f"<b>TVL:</b> {fmt_money(m.get('tvl', 0))}\n"
+        f"<b>Vol 24h:</b> {fmt_money(m.get('vol_24h', 0))}\n"
+        f"<b>Fees 24h:</b> {fmt_money(m.get('fees_24h', 0))}\n"
+        f"{rsi_emoji} RSI: {rsi_str}\n"
+        f"{lp_emoji} LP Score: {lp_score}/100\n"
+        f"🔗 {m.get('pool_url', '')}"
+    )
+
+
 def _update_pool_cache(pool_cache: dict, qualifying: list[dict], now_iso: str) -> None:
     for m in qualifying:
-        pid = m.get("pool_id", "")
+        pid = m.get("pool_id") or m.get("address", "")
         if not pid:
             continue
         tvl = m.get("tvl", 0)
+        vol_24h = m.get("vol_24h", 0)
+        apr = m.get("apr", 0)
+        rng_hist = m.get("range_hist")
+        if rng_hist and len(rng_hist.get("spike_prices", [])) >= 3:
+            sp = rng_hist["spike_prices"]
+            low = min(sp) * 0.95
+            high = max(sp) * 1.05
+            price = m.get("price_base")
+            if price and price > 0:
+                ancho = (high - low) / price
+                apr_rango = apr / ancho if ancho > 0 else None
+            else:
+                apr_rango = None
+        else:
+            apr_rango = None
         pool_cache[pid] = {
             "name":        m.get("name", ""),
-            "apr":         m.get("apr", 0),
+            "apr":         apr,
             "fees_day_1k": (1_000 / tvl) * m.get("fees_24h", 0) if tvl > 0 else 0,
             "rsi":         m.get("rsi"),
-            "lp_score":    _lp_score(m.get("vol_24h", 0), tvl, m.get("volume_spike"), m.get("rsi")),
+            "lp_score":    _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("rsi")),
+            "apr_rango":   apr_rango,
+            "vol_tvl":     vol_24h / tvl if tvl > 0 else None,
+            "source":      m.get("_source", ""),
             "last_seen":   now_iso,
         }
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
@@ -838,7 +942,7 @@ def _build_pancake_decline(m: dict, reason: str, prev_tvl: float, prev_vol: floa
     )
 
 
-def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifying: list) -> int:
+def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifying: list, all_bluechip: list) -> int:
     print("[PancakeSwap] Fetching pools…")
     raw_pools = _fetch_pancake_pools()
     print(f"[PancakeSwap] Fetched {len(raw_pools)} pools")
@@ -848,6 +952,9 @@ def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifyin
         m = _compute_pancake_metrics(pool)
         if m and _passes_pancake_filters(m):
             qualifying.append(m)
+        elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
+            m["_source"] = "PancakeSwap BSC"
+            all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["is_btcb"]), -x["apr"]))
     print(f"[PancakeSwap] {len(qualifying)} pools pass filters")
@@ -976,7 +1083,7 @@ def _compute_orca_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None
     }
 
 
-def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list) -> int:
+def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list, all_bluechip: list) -> int:
     print("[Orca] Fetching whirlpools…")
     pools = _fetch_orca_pools()
     print(f"[Orca] Fetched {len(pools)} pools")
@@ -986,6 +1093,9 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache
         m = _compute_orca_metrics(pool, top_coins)
         if m and passes_new_filters(m):
             qualifying.append(m)
+        elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
+            m["_source"] = "Orca Solana"
+            all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[Orca] {len(qualifying)} pools pass filters")
@@ -1147,6 +1257,7 @@ def run_uniswap(
     top_coins: dict[str, dict],
     rsi_cache: dict,
     all_qualifying: list,
+    all_bluechip: list,
 ) -> int:
     label = UNISWAP_NETWORKS[chain]["label"]
     print(f"[{label}] Fetching pools from GeckoTerminal…")
@@ -1159,6 +1270,9 @@ def run_uniswap(
         m = _compute_uniswap_metrics(pool, chain, top_coins, token_cg_map)
         if m and passes_new_filters(m):
             qualifying.append(m)
+        elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
+            m["_source"] = label
+            all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
@@ -1261,7 +1375,7 @@ def _compute_projectx_metrics(
     }
 
 
-def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list) -> int:
+def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list, all_bluechip: list) -> int:
     label = "PROJECTX HYPERLIQUID"
     print(f"[{label}] Querying Goldsky subgraph…")
     data = _graphql_post(PROJECTX_GRAPHQL, _PROJECTX_QUERY)
@@ -1278,6 +1392,9 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_c
         m = _compute_projectx_metrics(pool, top_coins)
         if m and passes_new_filters(m):
             qualifying.append(m)
+        elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
+            m["_source"] = "ProjectX HyperEVM"
+            all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
@@ -1373,7 +1490,7 @@ def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | N
     }
 
 
-def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list) -> int:
+def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list, all_bluechip: list) -> int:
     label = "RAYDIUM"
     print(f"[{label}] Fetching concentrated pools…")
     pools = _fetch_raydium_pools()
@@ -1383,6 +1500,9 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
         m = _compute_raydium_metrics(pool, top_coins)
         if m and passes_new_filters(m):
             qualifying.append(m)
+        elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
+            m["_source"] = "Raydium Solana"
+            all_bluechip.append(m)
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
     _enrich_rsi(qualifying, rsi_cache)
@@ -1412,28 +1532,54 @@ def main() -> None:
             print("[Summary] No pool cache yet, skipping")
         state["last_summary_slot"] = _summary_slot_id(now_utc)
 
+    # TOP 3 DIARIO — once per day at 12:00–12:30 UTC
+    if _should_send_daily_top3(state, now_utc):
+        if pool_cache:
+            send_telegram(_build_top3_daily(pool_cache, now_utc))
+            print("[Daily] TOP 3 sent")
+        else:
+            print("[Daily] No pool cache yet, skipping")
+        state["last_daily_top3_date"] = str(now_utc.date())
+
     # Fetch CoinGecko top-N once; shared by Orca + Uniswap
     print(f"[CoinGecko] Fetching top-{TOP_N_COINS} coins…")
     top_coins = fetch_top_coins(TOP_N_COINS)
     print(f"[CoinGecko] Loaded {len(top_coins)} coins")
 
-    rsi_cache:     dict       = {}
+    rsi_cache:      dict       = {}
     all_qualifying: list[dict] = []
-    total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso, rsi_cache, all_qualifying)
+    all_bluechip:   list[dict] = []
+    total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
-    total += run_orca(state.setdefault("orca", {}), now_iso, top_coins, rsi_cache, all_qualifying)
+    total += run_orca(state.setdefault("orca", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
-    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins, rsi_cache, all_qualifying)
+    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
-    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, rsi_cache, all_qualifying)
+    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
-    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, rsi_cache, all_qualifying)
+    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
-    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache, all_qualifying)
+    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
-    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache, all_qualifying)
+    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
 
     _update_pool_cache(pool_cache, all_qualifying, now_iso)
+
+    # BLUECHIP alerts — enrich RSI then send with 24h dedup
+    _enrich_rsi(all_bluechip, rsi_cache)
+    bluechip_alerted: dict = state.setdefault("bluechip_alerted", {})
+    cutoff_24h = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    for m in all_bluechip:
+        pid = m.get("pool_id") or m.get("address", "")
+        if not pid:
+            continue
+        if bluechip_alerted.get(pid, {}).get("last_alert", "") > cutoff_24h:
+            continue
+        if send_telegram(_build_bluechip_alert(m)):
+            total += 1
+        bluechip_alerted[pid] = {"last_alert": now_iso}
+    for pid in [k for k, v in bluechip_alerted.items() if v.get("last_alert", "") <= cutoff_24h]:
+        del bluechip_alerted[pid]
 
     state["last_run"] = now_iso
     save_state(state)
