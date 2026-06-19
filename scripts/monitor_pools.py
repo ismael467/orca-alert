@@ -63,6 +63,12 @@ NEW_MAX_APR    = 3_000.0
 NEW_PRICE_MIN  = -10.0   # %
 NEW_PRICE_MAX  =  20.0   # %
 NEW_SPIKE_MIN  =   2.0   # × 6-day average
+
+# ProjectX-specific filters — relaxed: mature stable pools, no spike pattern
+PROJECTX_MIN_TVL = 100_000
+PROJECTX_MIN_VOL =  50_000
+PROJECTX_MIN_APR =   100.0
+PROJECTX_MAX_APR = 5_000.0
 TOP_N_COINS    = 100
 
 TOP20_TOKENS = {
@@ -689,6 +695,17 @@ def passes_new_filters(m: dict) -> bool:
     if spike is not None and spike < NEW_SPIKE_MIN:
         return False
     if not m.get("in_top100"):
+        return False
+    return True
+
+
+def passes_projectx_filters(m: dict) -> bool:
+    """Relaxed filters for ProjectX HyperEVM: mature stable pools with no spike pattern."""
+    if m["tvl"] < PROJECTX_MIN_TVL:
+        return False
+    if m["vol_24h"] < PROJECTX_MIN_VOL:
+        return False
+    if not (PROJECTX_MIN_APR <= m["apr"] <= PROJECTX_MAX_APR):
         return False
     return True
 
@@ -1391,7 +1408,7 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_c
     qualifying: list[dict] = []
     for pool in raw_pools:
         m = _compute_projectx_metrics(pool, top_coins)
-        if m and passes_new_filters(m):
+        if m and passes_projectx_filters(m):
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "ProjectX HyperEVM"
