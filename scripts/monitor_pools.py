@@ -684,7 +684,21 @@ def fetch_top_coins(n: int = TOP_N_COINS) -> dict[str, dict]:
 # New-source shared filter + alert builders
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _is_trap(m: dict) -> bool:
+    """Shared anti-trap guard applied to every source before source-specific filters."""
+    tvl = m.get("tvl", 0)
+    if tvl < 20_000:
+        return True
+    if tvl > 0 and m.get("vol_24h", 0) / tvl > 10:
+        return True
+    if m.get("apr", 0) > 5_000:
+        return True
+    return False
+
+
 def passes_new_filters(m: dict) -> bool:
+    if _is_trap(m):
+        return False
     if m["tvl"] < NEW_MIN_TVL:
         return False
     if m["vol_24h"] < NEW_MIN_VOL:
@@ -703,7 +717,9 @@ def passes_new_filters(m: dict) -> bool:
 
 
 def passes_projectx_filters(m: dict) -> bool:
-    """Relaxed filters for ProjectX HyperEVM: mature stable pools with no spike pattern."""
+    """Relaxed filters for ProjectX/KittenSwap HyperEVM: mature stable pools, no spike pattern."""
+    if _is_trap(m):
+        return False
     if m["tvl"] < PROJECTX_MIN_TVL:
         return False
     if m["vol_24h"] < PROJECTX_MIN_VOL:
@@ -912,6 +928,8 @@ def _compute_pancake_metrics(pool: dict) -> dict | None:
 
 
 def _passes_pancake_filters(m: dict) -> bool:
+    if _is_trap(m):
+        return False
     vol_ok = m["vol_24h"] >= PANCAKE_MIN_VOL or m["vol_h1"] * 24 >= PANCAKE_MIN_VOL
     return (
         m["apr"] >= PANCAKE_MIN_APR
