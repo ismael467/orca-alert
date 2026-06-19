@@ -127,7 +127,10 @@ PROJECTX_GRAPHQL = (
     "https://api.goldsky.com/api/public/project_cmbbm2iwckb1b01t39xed236t"
     "/subgraphs/uniswap-v3-hyperevm-position/prod/gn"
 )
-PROJECTX_APP_URL = "https://app.projectx.finance/#/pool/{addr}"
+PROJECTX_APP_URL  = "https://app.projectx.finance/#/pool/{addr}"
+
+KITTENSWAP_API     = "https://api.kittenswap.finance/pools"
+KITTENSWAP_APP_URL = "https://kittenswap.finance/pool/{addr}"
 
 _PROJECTX_QUERY = """
 {
@@ -1424,6 +1427,100 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_c
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# KittenSwap HyperEVM — direct REST API
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _fetch_kittenswap_pools() -> list[dict]:
+    for attempt in range(3):
+        try:
+            resp = requests.get(KITTENSWAP_API, timeout=30)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            print(f"[KittenSwap] Attempt {attempt + 1}: {exc}")
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+    return []
+
+
+def _compute_kittenswap_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | None:
+    tvl      = float(pool.get("tvlUSD")      or 0)
+    vol_24h  = float(pool.get("volume24USD") or 0)
+    fees_24h = float(pool.get("fees24USD")   or 0)
+
+    if tvl <= 0 or vol_24h <= 0:
+        return None
+
+    apr = (fees_24h / tvl) * 365 * 100
+
+    pair  = pool.get("pair") or {}
+    sym_a = ((pair.get("token0") or {}).get("symbol") or "?").strip()
+    sym_b = ((pair.get("token1") or {}).get("symbol") or "?").strip()
+
+    top_syms  = {info["symbol"].lower() for info in top_coins.values()}
+    in_top100 = sym_a.lower() in top_syms or sym_b.lower() in top_syms
+
+    fee_raw = int(pool.get("fee") or 0)
+    fee_pct = fee_raw / 10_000   # 1688 → 0.1688%
+    name    = f"{sym_a}/{sym_b} ({fee_pct:.4f}%)"
+
+    pool_id   = pool.get("id", "")
+    _a_stable = sym_a.lower() in STABLE_SYMBOLS
+    _b_stable = sym_b.lower() in STABLE_SYMBOLS
+    if not _a_stable:
+        cg_id_main, sym_main = None, sym_a
+    elif not _b_stable:
+        cg_id_main, sym_main = None, sym_b
+    else:
+        cg_id_main, sym_main = None, ""
+
+    return {
+        "address":          pool_id,
+        "name":             name,
+        "tvl":              tvl,
+        "vol_24h":          vol_24h,
+        "fees_24h":         fees_24h,
+        "apr":              apr,
+        "volume_spike":     None,
+        "price_change_24h": None,
+        "in_top100":        in_top100,
+        "badge":            "🟢" if in_top100 else "🟡",
+        "alert_title":      f"🐱 KITTENSWAP HyperEVM {'🟢' if in_top100 else '🟡'}",
+        "pool_url":         KITTENSWAP_APP_URL.format(addr=pool_id),
+        "sym_a":            sym_a,
+        "sym_b":            sym_b,
+        "price_base":       None,
+        "day_volumes":      None,
+        "cg_id_main":       cg_id_main,
+        "sym_main":         sym_main,
+    }
+
+
+def run_kittenswap(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache: dict, all_qualifying: list, all_bluechip: list) -> int:
+    label = "KITTENSWAP HYPEREVM"
+    print(f"[{label}] Fetching pools…")
+    pools = _fetch_kittenswap_pools()
+    print(f"[{label}] Fetched {len(pools)} pools")
+
+    qualifying: list[dict] = []
+    for pool in pools:
+        m = _compute_kittenswap_metrics(pool, top_coins)
+        if m and passes_projectx_filters(m):
+            qualifying.append(m)
+        elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
+            m["_source"] = "KittenSwap HyperEVM"
+            all_bluechip.append(m)
+
+    qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
+    print(f"[{label}] {len(qualifying)} pools pass filters")
+    _enrich_rsi(qualifying, rsi_cache)
+    _enrich_range(qualifying, rsi_cache)
+    all_qualifying.extend(qualifying)
+    ns_state["qualifying_count"] = len(qualifying)
+    return _process_new_source(qualifying, label, ns_state, now_iso)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Raydium CLMM (Solana)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1578,6 +1675,8 @@ def main() -> None:
     total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
     total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    time.sleep(3)
+    total += run_kittenswap(state.setdefault("kittenswap", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
     time.sleep(3)
     total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
 
