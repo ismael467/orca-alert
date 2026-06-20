@@ -31,6 +31,113 @@ MAX_TVL = 5_000_000
 DECLINE_TVL_PCT = 50
 DECLINE_VOL_PCT = 60
 
+# ── Hard-block filter constants ──────────────────────────────────────────────
+HARD_MIN_LP_SCORE  = 30
+HARD_MIN_TVL       = 50_000
+HARD_MAX_APR_RANGO = 3_000
+
+BLACKLIST_SYMBOLS = {
+    "USELESS", "SHIT", "DOGE2", "PEPE2", "SCAM",
+    "FAKE", "SAFE", "MOON2", "INU2",
+}
+
+_STABLE_SYMS = {"usdc", "usdt", "dai", "busd", "tusd", "frax", "usdh", "eurc"}
+
+
+def _calc_rsi(closes: list[float], period: int = 14) -> float | None:
+    if len(closes) < period + 1:
+        return None
+    deltas   = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+    gains    = [max(d, 0.0) for d in deltas]
+    losses   = [max(-d, 0.0) for d in deltas]
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    for i in range(period, len(deltas)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+    if avg_loss == 0:
+        return 100.0
+    return 100.0 - (100.0 / (1.0 + avg_gain / avg_loss))
+
+
+def _fetch_rsi(cg_id: str | None, symbol: str, cache: dict) -> float | None:
+    if not symbol:
+        return None
+    key = cg_id or symbol.upper()
+    if key in cache:
+        return cache[key]
+    closes: list[float] = []
+    if cg_id:
+        url = f"https://api.coingecko.com/api/v3/coins/{cg_id}/ohlc?vs_currency=usd&days=14"
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, timeout=20)
+                if resp.status_code == 429:
+                    print("[RSI/CoinGecko] rate limit — waiting 15s…")
+                    time.sleep(15)
+                    continue
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data:
+                        closes = [float(row[4]) for row in data]
+                    break
+            except Exception as exc:
+                print(f"[RSI/CoinGecko] {exc}")
+                if attempt < 2:
+                    time.sleep(2)
+    if not closes:
+        sym_upper = symbol.upper()
+        for quote in ("USDT", "USDC"):
+            try:
+                resp = requests.get(
+                    f"https://api.binance.com/api/v3/klines"
+                    f"?symbol={sym_upper}{quote}&interval=1d&limit=50",
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data:
+                        closes = [float(row[4]) for row in data]
+                    break
+            except Exception as exc:
+                print(f"[RSI/Binance] {sym_upper}{quote}: {exc}")
+    rsi = _calc_rsi(closes) if closes else None
+    cache[key] = rsi
+    return rsi
+
+
+def _lp_score(vol_24h: float, tvl: float, rsi: float | None) -> int:
+    score = 0.0
+    if tvl > 0:
+        score += min(40.0, (vol_24h / tvl) * 20.0)
+    if rsi is not None and rsi < 50:
+        score += 20.0
+    if tvl >= 500_000:
+        score += 10.0
+    return int(min(100, score))
+
+
+def _hard_block(m: dict) -> tuple[bool, str]:
+    """Return (True, reason) if this pool must be dropped before alerting."""
+    # 1. LP Score < 30
+    lp = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("rsi"))
+    if lp < HARD_MIN_LP_SCORE:
+        return True, f"LP Score {lp} < {HARD_MIN_LP_SCORE}"
+    # 2. RSI N/D
+    if m.get("rsi") is None:
+        return True, "RSI N/D (token no encontrado en CoinGecko/Binance)"
+    # 3. TVL < $50,000
+    if m.get("tvl", 0) < HARD_MIN_TVL:
+        return True, f"TVL ${m['tvl']:,.0f} < ${HARD_MIN_TVL:,}"
+    # 4. APR > 3,000% (no range calc for Orca; base APR used as proxy)
+    if m.get("apr", 0) > HARD_MAX_APR_RANGO:
+        return True, f"APR {m['apr']:,.0f}% > {HARD_MAX_APR_RANGO:,}%"
+    # 5. Blacklisted symbol
+    for sym in (m.get("symbol_a", "").upper(), m.get("symbol_b", "").upper()):
+        if sym in BLACKLIST_SYMBOLS:
+            return True, f"Símbolo en lista negra: {sym}"
+    return False, ""
+
 
 def send_telegram(message: str) -> bool:
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -111,6 +218,8 @@ def compute_metrics(pool: dict, top100_ids: set[str]) -> dict | None:
         "name": name,
         "symbol_a": symbol_a,
         "symbol_b": symbol_b,
+        "cg_id_a": cg_id_a,
+        "cg_id_b": cg_id_b,
         "fee_rate": lp_fee_rate,
         "tvl": tvl,
         "vol_24h": vol_24h,
@@ -208,12 +317,28 @@ def main() -> None:
 
     print(f"[{now_iso}] {len(qualifying)} pools pass filters")
 
+    # Fetch RSI for qualifying pools (required for hard-block checks)
+    rsi_cache: dict = {}
+    for m in qualifying:
+        sym_a = m.get("symbol_a", "")
+        sym_b = m.get("symbol_b", "")
+        if sym_a.lower() not in _STABLE_SYMS:
+            cg_id, sym = m.get("cg_id_a") or None, sym_a
+        elif sym_b.lower() not in _STABLE_SYMS:
+            cg_id, sym = m.get("cg_id_b") or None, sym_b
+        else:
+            cg_id, sym = None, ""
+        m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
+
     alerts_sent = 0
     for m in qualifying:
         pid = m["address"]
 
         if pid not in alerted:
-            if send_telegram(build_new_alert(m)):
+            _blocked, _reason = _hard_block(m)
+            if _blocked:
+                print(f"[SKIP] {m['name']} — {_reason}")
+            elif send_telegram(build_new_alert(m)):
                 alerts_sent += 1
             alerted[pid] = {
                 "first_seen": now_iso,
@@ -239,7 +364,10 @@ def main() -> None:
                     decline_reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
 
                 if decline_reason:
-                    if send_telegram(
+                    _blocked, _reason = _hard_block(m)
+                    if _blocked:
+                        print(f"[SKIP-DECLINE] {m['name']} — {_reason}")
+                    elif send_telegram(
                         build_decline_alert(m, decline_reason, prev_tvl, prev_vol)
                     ):
                         alerts_sent += 1
