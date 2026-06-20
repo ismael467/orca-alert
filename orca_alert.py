@@ -43,6 +43,12 @@ BLACKLIST_SYMBOLS = {
 
 _STABLE_SYMS = {"usdc", "usdt", "dai", "busd", "tusd", "frax", "usdh", "eurc"}
 
+BLUE_CHIP_TOKENS = {
+    "BTC", "WBTC", "ETH", "WETH", "SOL", "WSOL", "BNB", "WBNB", "XRP", "ADA",
+    "AVAX", "DOT", "MATIC", "WMATIC", "LINK", "UNI", "LTC", "BCH", "USDC", "USDT",
+    "HYPE", "WHYPE", "ARB", "OP", "UBTC", "UETH", "USOL", "USDH", "TON", "NEAR", "APT",
+}
+
 
 def _calc_rsi(closes: list[float], period: int = 14) -> float | None:
     if len(closes) < period + 1:
@@ -106,7 +112,12 @@ def _fetch_rsi(cg_id: str | None, symbol: str, cache: dict) -> float | None:
     return rsi
 
 
-def _lp_score(vol_24h: float, tvl: float, rsi: float | None) -> int:
+def _blue_chip_count(sym_a: str, sym_b: str) -> int:
+    """Return 0, 1, or 2: how many of the two symbols are in BLUE_CHIP_TOKENS."""
+    return sum(1 for s in (sym_a.upper(), sym_b.upper()) if s in BLUE_CHIP_TOKENS)
+
+
+def _lp_score(vol_24h: float, tvl: float, rsi: float | None, blue_chips: int = 0) -> int:
     score = 0.0
     if tvl > 0:
         score += min(40.0, (vol_24h / tvl) * 20.0)
@@ -114,13 +125,17 @@ def _lp_score(vol_24h: float, tvl: float, rsi: float | None) -> int:
         score += 20.0
     if tvl >= 500_000:
         score += 10.0
+    if blue_chips >= 2:
+        score += 15.0
+    elif blue_chips == 1:
+        score += 10.0
     return int(min(100, score))
 
 
 def _hard_block(m: dict) -> tuple[bool, str]:
     """Return (True, reason) if this pool must be dropped before alerting."""
     # 1. LP Score < 30
-    lp = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("rsi"))
+    lp = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("rsi"), _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
     if lp < HARD_MIN_LP_SCORE:
         return True, f"LP Score {lp} < {HARD_MIN_LP_SCORE}"
     # 2. RSI N/D
@@ -265,7 +280,7 @@ def fmt_money(value: float) -> str:
 def build_new_alert(m: dict) -> str:
     rsi     = m.get("rsi")
     rsi_str = f"{rsi:.0f}" if rsi is not None else "N/D"
-    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi)
+    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
     vol_tvl = m["vol_24h"] / m["tvl"] if m["tvl"] > 0 else 0
     fire    = " 🔥" if vol_tvl > 1 else ""
     fees_1k = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
@@ -286,10 +301,10 @@ def build_new_alert(m: dict) -> str:
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
     rsi     = m.get("rsi")
     rsi_str = f"{rsi:.0f}" if rsi is not None else "N/D"
-    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi)
+    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
     fees_1k = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
     return (
-        f"⚠️ DECLIVE DETECTADO — Orca | SOL\n"
+        f"🔴📉 DECLIVE DETECTADO — Orca | SOL\n"
         f"Pool: {m['symbol_a']} / {m['symbol_b']}\n"
         f"Motivo: {reason}\n"
         f"TVL: {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
