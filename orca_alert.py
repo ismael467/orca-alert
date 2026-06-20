@@ -263,32 +263,40 @@ def fmt_money(value: float) -> str:
 
 
 def build_new_alert(m: dict) -> str:
-    badge = m["badge"]
-    data_lines = (
-        f"Pool:      {m['name']}\n"
-        f"APR:       {m['apr']:,.0f}%\n"
-        f"Vol 24h:   {fmt_money(m['vol_24h'])}\n"
-        f"Fees 24h:  {fmt_money(m['fees_24h'])}\n"
-        f"TVL:       {fmt_money(m['tvl'])}"
-    )
+    rsi     = m.get("rsi")
+    rsi_str = f"{rsi:.0f}" if rsi is not None else "N/D"
+    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi)
+    vol_tvl = m["vol_24h"] / m["tvl"] if m["tvl"] > 0 else 0
+    fire    = " 🔥" if vol_tvl > 1 else ""
+    fees_1k = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
     return (
-        f"🚨 NUEVA OPORTUNIDAD — ORCA {badge}\n\n"
-        f"<pre>{data_lines}</pre>\n\n"
+        f"🚨 NUEVA OPORTUNIDAD — Orca | SOL\n"
+        f"Pool: {m['symbol_a']} / {m['symbol_b']}\n"
+        f"APR: {m['apr']:,.0f}%\n"
+        f"TVL: {fmt_money(m['tvl'])}\n"
+        f"Vol 24h: {fmt_money(m['vol_24h'])}\n"
+        f"Fees/día ($1K): ${fees_1k:.2f}\n"
+        f"Vol/TVL: {vol_tvl:.1f}x{fire}\n"
+        f"RSI: {rsi_str}\n"
+        f"LP Score: {lp}/100\n"
         f"🔗 https://birdeye.so/pool/{m['address']}?chain=solana"
     )
 
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
-    data_lines = (
-        f"Pool:      {m['name']}\n"
-        f"Motivo:    {reason}\n"
-        f"TVL:       {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
-        f"Vol 24h:   {fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})\n"
-        f"Fees 24h:  {fmt_money(m['fees_24h'])}"
-    )
+    rsi     = m.get("rsi")
+    rsi_str = f"{rsi:.0f}" if rsi is not None else "N/D"
+    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi)
+    fees_1k = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
     return (
-        f"⚠️ POOL DECLIVE — ORCA\n\n"
-        f"<pre>{data_lines}</pre>\n\n"
+        f"⚠️ DECLIVE DETECTADO — Orca | SOL\n"
+        f"Pool: {m['symbol_a']} / {m['symbol_b']}\n"
+        f"Motivo: {reason}\n"
+        f"TVL: {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
+        f"Vol 24h: {fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})\n"
+        f"Fees/día ($1K): ${fees_1k:.2f}\n"
+        f"RSI: {rsi_str}\n"
+        f"LP Score: {lp}/100\n"
         f"🔗 https://birdeye.so/pool/{m['address']}?chain=solana"
     )
 
