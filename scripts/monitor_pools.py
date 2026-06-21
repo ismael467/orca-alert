@@ -475,9 +475,9 @@ def _build_top5_summary(pool_cache: dict, now_utc: datetime) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _should_send_daily_top3(state: dict, now_utc: datetime) -> bool:
-    if not (now_utc.hour == 12 and now_utc.minute <= 30):
+    if not (now_utc.hour == 12 and now_utc.minute < 5):
         return False
-    return state.get("last_daily_top3_date") != str(now_utc.date())
+    return state.get("last_top3_date") != str(now_utc.date())
 
 
 def _build_top3_daily(pool_cache: dict, now_utc: datetime) -> str:
@@ -494,9 +494,11 @@ def _build_top3_daily(pool_cache: dict, now_utc: datetime) -> str:
         apr_rango_str = f"{apr_rango:,.0f}%" if apr_rango is not None else "N/D"
         vol_tvl = p.get("vol_tvl")
         vol_tvl_str = f"{vol_tvl:.2f}x" if vol_tvl is not None else "N/D"
-        source = p.get("source", "")
+        dex = p.get("dex", "")
+        chain = p.get("chain", "")
+        dex_chain = f" — {dex} | {chain}" if dex and chain else ""
         lines.append(
-            f"{medals[i]} {p['name']}" + (f" · {source}" if source else "") + "\n"
+            f"{medals[i]} {p['name']}{dex_chain}\n"
             f"   APR: {p['apr']:,.0f}% | APR rango: {apr_rango_str}\n"
             f"   Fees/día ($1K): ${p.get('fees_day_1k', 0):.2f} | Vol/TVL: {vol_tvl_str}\n"
             f"   RSI: {rsi_str} | {score_emoji} LP Score: {s}/100"
@@ -579,6 +581,8 @@ def _update_pool_cache(pool_cache: dict, qualifying: list[dict], now_iso: str) -
             "apr_rango":   apr_rango,
             "vol_tvl":     vol_24h / tvl if tvl > 0 else None,
             "source":      m.get("_source", ""),
+            "dex":         m.get("_dex", ""),
+            "chain":       m.get("_chain", ""),
             "last_seen":   now_iso,
         }
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
@@ -990,6 +994,8 @@ def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifyin
     for pool in raw_pools:
         m = _compute_pancake_metrics(pool)
         if m and _passes_pancake_filters(m):
+            m["_dex"] = "PancakeSwap V3"
+            m["_chain"] = "BSC"
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "PancakeSwap BSC"
@@ -1131,6 +1137,8 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache
     for pool in pools:
         m = _compute_orca_metrics(pool, top_coins)
         if m and passes_new_filters(m):
+            m["_dex"] = "Orca"
+            m["_chain"] = "Solana"
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "Orca Solana"
@@ -1304,10 +1312,13 @@ def run_uniswap(
     raw_pools, token_cg_map = _fetch_uniswap_pools(chain)
     print(f"[{label}] Fetched {len(raw_pools)} pools, {len(token_cg_map)} token CG IDs")
 
+    chain_display = {"ethereum": "Ethereum", "arbitrum": "Arbitrum", "base": "Base"}.get(chain, chain.capitalize())
     qualifying: list[dict] = []
     for pool in raw_pools:
         m = _compute_uniswap_metrics(pool, chain, top_coins, token_cg_map)
         if m and passes_new_filters(m):
+            m["_dex"] = "Uniswap V3"
+            m["_chain"] = chain_display
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = label
@@ -1430,6 +1441,8 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_c
     for pool in raw_pools:
         m = _compute_projectx_metrics(pool, top_coins)
         if m and passes_projectx_filters(m):
+            m["_dex"] = "ProjectX"
+            m["_chain"] = "HyperEVM"
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "ProjectX HyperEVM"
@@ -1524,6 +1537,8 @@ def run_kittenswap(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi
     for pool in pools:
         m = _compute_kittenswap_metrics(pool, top_coins)
         if m and passes_projectx_filters(m):
+            m["_dex"] = "KittenSwap"
+            m["_chain"] = "HyperEVM"
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "KittenSwap HyperEVM"
@@ -1632,6 +1647,8 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
     for pool in pools:
         m = _compute_raydium_metrics(pool, top_coins)
         if m and passes_new_filters(m):
+            m["_dex"] = "Raydium"
+            m["_chain"] = "Solana"
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "Raydium Solana"
@@ -1672,7 +1689,7 @@ def main() -> None:
             print("[Daily] TOP 3 sent")
         else:
             print("[Daily] No pool cache yet, skipping")
-        state["last_daily_top3_date"] = str(now_utc.date())
+        state["last_top3_date"] = str(now_utc.date())
 
     # Fetch CoinGecko top-N once; shared by Orca + Uniswap
     print(f"[CoinGecko] Fetching top-{TOP_N_COINS} coins…")
