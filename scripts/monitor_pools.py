@@ -79,6 +79,12 @@ TOP20_TOKENS = {
 BLUECHIP_MIN_TVL = 100_000
 BLUECHIP_MIN_APR = 100.0
 
+BLUE_CHIP_LP = {
+    "BTC","ETH","WETH","WBTC","cbBTC","cbETH","SOL","BNB","USDC","USDT",
+    "DAI","UNI","LINK","AAVE","MKR","CRV","LDO","ARB","OP","MATIC","AVAX",
+    "FTM","INJ","SUI","APT","TIA","VIRTUAL","AERO",
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Orca
 # ─────────────────────────────────────────────────────────────────────────────
@@ -412,21 +418,34 @@ def _vol_tvl_line(vol_24h: float, tvl: float) -> str:
     return f"📊 Vol/TVL: {ratio:.2f}{fire}"
 
 
-def _lp_score(vol_24h: float, tvl: float, volume_spike: float | None, rsi: float | None) -> int:
+def _lp_score(vol_24h: float, tvl: float, volume_spike: float | None, sym_a: str = "", sym_b: str = "") -> int:
     score = 0.0
     if tvl > 0:
-        score += min(40.0, (vol_24h / tvl) * 20.0)
+        ratio = vol_24h / tvl
+        if ratio >= 3.0:
+            score += 40.0
+        elif ratio >= 2.0:
+            score += 30.0
+        elif ratio >= 1.0:
+            score += 20.0
     if volume_spike is not None:
-        score += min(30.0, volume_spike * 10.0)
-    if rsi is not None and rsi < 50:
+        if volume_spike >= 3.0:
+            score += 30.0
+        elif volume_spike >= 2.0:
+            score += 20.0
+    if tvl >= 1_000_000:
         score += 20.0
-    if tvl >= 500_000:
+    elif tvl >= 500_000:
+        score += 15.0
+    elif tvl >= 200_000:
+        score += 10.0
+    if sym_a.upper() in BLUE_CHIP_LP or sym_b.upper() in BLUE_CHIP_LP:
         score += 10.0
     return int(min(100, score))
 
 
-def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, rsi: float | None) -> str:
-    s = _lp_score(vol_24h, tvl, volume_spike, rsi)
+def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, sym_a: str = "", sym_b: str = "") -> str:
+    s = _lp_score(vol_24h, tvl, volume_spike, sym_a, sym_b)
     emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
     return f"{emoji} LP Score: {s}/100"
 
@@ -535,7 +554,7 @@ def _build_bluechip_alert(m: dict) -> str:
     rsi_val = m.get("rsi")
     rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
     rsi_emoji = "🔵" if rsi_val is None else ("🟢" if rsi_val < 45 else ("🟡" if rsi_val < 60 else "🔴"))
-    lp_score = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("volume_spike"), rsi_val)
+    lp_score = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
     lp_emoji = "🟢" if lp_score >= 70 else ("🟡" if lp_score >= 50 else "🔴")
     return (
         f"🔵 <b>OPORTUNIDAD ESTABLE</b> — {source}\n"
@@ -577,7 +596,7 @@ def _update_pool_cache(pool_cache: dict, qualifying: list[dict], now_iso: str) -
             "apr":         apr,
             "fees_day_1k": (1_000 / tvl) * m.get("fees_24h", 0) if tvl > 0 else 0,
             "rsi":         m.get("rsi"),
-            "lp_score":    _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("rsi")),
+            "lp_score":    _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", "")),
             "apr_rango":   apr_rango,
             "vol_tvl":     vol_24h / tvl if tvl > 0 else None,
             "source":      m.get("_source", ""),
@@ -763,7 +782,7 @@ def _build_new_alert(m: dict, label: str) -> str:
         f"{_rsi_line(m.get('rsi'))}\n"
         f"{_fees_day_1k_line(m['tvl'], m['fees_24h'])}\n"
         f"{_vol_tvl_line(m['vol_24h'], m['tvl'])}\n"
-        f"{_lp_score_line(m['vol_24h'], m['tvl'], m.get('volume_spike'), m.get('rsi'))}\n\n"
+        f"{_lp_score_line(m['vol_24h'], m['tvl'], m.get('volume_spike'), m.get('sym_a', ''), m.get('sym_b', ''))}\n\n"
         f"🔗 {m['pool_url']}"
     )
 
@@ -968,7 +987,7 @@ def _build_pancake_alert(m: dict) -> str:
         f"{_rsi_line(m.get('rsi'))}\n"
         f"{_fees_day_1k_line(m['tvl'], m['fees_24h'])}\n"
         f"{_vol_tvl_line(m['vol_24h'], m['tvl'])}\n"
-        f"{_lp_score_line(m['vol_24h'], m['tvl'], m.get('volume_spike'), m.get('rsi'))}\n"
+        f"{_lp_score_line(m['vol_24h'], m['tvl'], m.get('volume_spike'), m.get('sym_a', ''), m.get('sym_b', ''))}\n"
         f"🔗 <a href='https://pancakeswap.finance/info/v3/pairs/{m['address']}'>PancakeSwap V3</a>"
     )
 
