@@ -754,7 +754,7 @@ def _build_new_alert(m: dict, label: str) -> str:
     )
     return (
         f"{title}\n\n"
-        f"<pre>{body}</pre>\n\n"
+        f"{body}\n\n"
         f"{rng}\n"
         f"{_rsi_line(m.get('rsi'))}\n"
         f"{_fees_day_1k_line(m['tvl'], m['fees_24h'])}\n"
@@ -776,7 +776,7 @@ def _build_new_decline(
     )
     return (
         f"⚠️ POOL DECLIVE — {label}\n\n"
-        f"<pre>{body}</pre>\n\n"
+        f"{body}\n\n"
         f"🔗 {m['pool_url']}"
     )
 
