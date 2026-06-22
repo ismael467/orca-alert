@@ -133,10 +133,17 @@ def _lp_score(vol_24h: float, tvl: float, rsi: float | None, blue_chips: int = 0
     return int(min(100, score))
 
 
+def _fmt_apr_rango(val: float | None) -> str:
+    if val is None:
+        return "N/D"
+    return ">10,000%" if val > 10_000 else f"{val:,.0f}%"
+
+
 def _hard_block(m: dict) -> tuple[bool, str]:
     """Return (True, reason) if this pool must be dropped before alerting."""
     # 1. LP Score < 30
     lp = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("rsi"), _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
+    print(f"[hard_block] {m.get('name', '')} — LP Score: {lp}/100, TVL: ${m.get('tvl', 0):,.0f}")
     if lp < HARD_MIN_LP_SCORE:
         return True, f"LP Score {lp} < {HARD_MIN_LP_SCORE}"
     # 2. RSI N/D
@@ -279,42 +286,62 @@ def fmt_money(value: float) -> str:
 
 
 def build_new_alert(m: dict) -> str:
-    rsi     = m.get("rsi")
-    rsi_str = f"{rsi:.0f}" if rsi is not None else "N/D"
-    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
-    vol_tvl = m["vol_24h"] / m["tvl"] if m["tvl"] > 0 else 0
-    fire    = " 🔥" if vol_tvl > 1 else ""
-    fees_1k = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
-    return (
-        f"🚨 NUEVA OPORTUNIDAD — Orca | SOL\n"
-        f"Pool: {m['symbol_a']} / {m['symbol_b']}\n"
-        f"APR: {m['apr']:,.0f}%\n"
-        f"TVL: {fmt_money(m['tvl'])}\n"
-        f"Vol 24h: {fmt_money(m['vol_24h'])}\n"
-        f"Fees/día ($1K): ${fees_1k:.2f}\n"
-        f"Vol/TVL: {vol_tvl:.1f}x{fire}\n"
-        f"RSI: {rsi_str}\n"
-        f"LP Score: {lp}/100\n"
-        f"🔗 https://birdeye.so/pool/{m['address']}?chain=solana"
-    )
+    rsi       = m.get("rsi")
+    rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
+    rsi_emoji = "" if rsi is None else ("🟢" if rsi < 30 else ("🟡" if rsi < 50 else ("🟠" if rsi < 70 else "🔴")))
+    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
+    lp_emoji  = "🟢" if lp >= 70 else ("🟡" if lp >= 50 else "🔴")
+    tvl       = m["tvl"]
+    vol_24h   = m["vol_24h"]
+    fees_24h  = m["fees_24h"]
+    apr       = m["apr"]
+    vol_tvl   = vol_24h / tvl if tvl > 0 else 0
+    fire      = " 🔥" if vol_tvl > 1 else ""
+    fees_1k   = (1_000 / tvl) * fees_24h if tvl > 0 else 0
+    badge     = "🟢" if m.get("in_top100") else "🟡"
+    purl      = f"https://birdeye.so/pool/{m['address']}?chain=solana"
+    sep       = "━" * 19
+    W         = 19
+    body_lines = [
+        f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
+        f"{'TVL:':<{W}}{fmt_money(tvl)}",
+        f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
+        f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
+        sep,
+        f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
+        sep,
+        f"{'APR Fees:':<{W}}{apr:,.0f}%",
+        sep,
+        f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
+        f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
+    ]
+    header = f"🚨 NUEVA OPORTUNIDAD — Orca | SOL {badge}"
+    body   = "\n".join(body_lines)
+    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
-    rsi     = m.get("rsi")
-    rsi_str = f"{rsi:.0f}" if rsi is not None else "N/D"
-    lp      = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
-    fees_1k = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
-    return (
-        f"🔴📉 DECLIVE DETECTADO — Orca | SOL\n"
-        f"Pool: {m['symbol_a']} / {m['symbol_b']}\n"
-        f"Motivo: {reason}\n"
-        f"TVL: {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
-        f"Vol 24h: {fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})\n"
-        f"Fees/día ($1K): ${fees_1k:.2f}\n"
-        f"RSI: {rsi_str}\n"
-        f"LP Score: {lp}/100\n"
-        f"🔗 https://birdeye.so/pool/{m['address']}?chain=solana"
-    )
+    rsi       = m.get("rsi")
+    rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
+    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
+    lp_emoji  = "🟢" if lp >= 70 else ("🟡" if lp >= 50 else "🔴")
+    fees_1k   = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
+    purl      = f"https://birdeye.so/pool/{m['address']}?chain=solana"
+    sep       = "━" * 19
+    W         = 19
+    body_lines = [
+        f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
+        f"{'Motivo:':<{W}}{reason}",
+        f"{'TVL:':<{W}}{fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})",
+        f"{'Vol 24h:':<{W}}{fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})",
+        sep,
+        f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
+        f"{'RSI:':<{W}}{rsi_str}",
+        f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
+    ]
+    header = f"⚠️ POOL DECLIVE — Orca | SOL"
+    body   = "\n".join(body_lines)
+    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def main() -> None:
