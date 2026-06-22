@@ -258,6 +258,7 @@ def passes_filters(m: dict) -> bool:
         m["apr"] >= MIN_APR_PCT
         and m["vol_24h"] >= MIN_VOL_24H
         and m["fees_24h"] >= MIN_FEES_24H
+        and m["tvl"] >= HARD_MIN_TVL
         and m["tvl"] <= MAX_TVL
     )
 
@@ -309,7 +310,6 @@ def build_new_alert(m: dict) -> str:
         f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
         sep,
         f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
-        sep,
         f"{'APR Fees:':<{W}}{apr:,.0f}%",
         sep,
         f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
