@@ -28,8 +28,9 @@ MIN_APR_PCT = 500
 MIN_VOL_24H = 50_000
 MIN_FEES_24H = 500
 MAX_TVL = 5_000_000
-DECLINE_TVL_PCT = 50
-DECLINE_VOL_PCT = 60
+DECLINE_TVL_PCT     = 50
+DECLINE_VOL_PCT     = 60
+DECLINE_VOL_TVL_PCT = 40   # alert if Vol/TVL ratio drops >40% vs previous run
 
 # ── Hard-block filter constants ──────────────────────────────────────────────
 HARD_MIN_LP_SCORE  = 30
@@ -408,11 +409,17 @@ def main() -> None:
                 tvl_chg = (m["tvl"] - prev_tvl) / prev_tvl if prev_tvl > 0 else 0
                 vol_chg = (m["vol_24h"] - prev_vol) / prev_vol if prev_vol > 0 else 0
 
+                prev_vol_tvl = prev_vol / prev_tvl if prev_tvl > 0 else 0
+                curr_vol_tvl = m["vol_24h"] / m["tvl"] if m["tvl"] > 0 else 0
+                vol_tvl_chg  = (curr_vol_tvl - prev_vol_tvl) / prev_vol_tvl if prev_vol_tvl > 0 else 0
+
                 decline_reason = None
                 if tvl_chg <= -(DECLINE_TVL_PCT / 100):
                     decline_reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
                 elif vol_chg <= -(DECLINE_VOL_PCT / 100):
                     decline_reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                elif vol_tvl_chg <= -(DECLINE_VOL_TVL_PCT / 100):
+                    decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
 
                 if decline_reason:
                     _blocked, _reason = _hard_block(m)
