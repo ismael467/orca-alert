@@ -33,7 +33,7 @@ DECLINE_VOL_PCT     = 60
 DECLINE_VOL_TVL_PCT = 40   # alert if Vol/TVL ratio drops >40% vs previous run
 
 # ── Hard-block filter constants ──────────────────────────────────────────────
-HARD_MIN_LP_SCORE  = 30
+HARD_MIN_LP_SCORE  = 40
 HARD_MIN_TVL       = 50_000
 HARD_MAX_APR_RANGO = 3_000
 
@@ -119,18 +119,59 @@ def _blue_chip_count(sym_a: str, sym_b: str) -> int:
     return sum(1 for s in (sym_a.upper(), sym_b.upper()) if s in BLUE_CHIP_TOKENS)
 
 
-def _lp_score(vol_24h: float, tvl: float, rsi: float | None, blue_chips: int = 0) -> int:
+def _lp_score(
+    vol_24h: float,
+    tvl: float,
+    rsi: float | None,
+    blue_chips: int = 0,
+    apr: float = 0.0,
+) -> int:
+    """
+    LP opportunity score 0-100.
+    Scale: 🔴 0-39 Evitar | 🟡 40-59 Interesante | 🟢 60-79 Buena | 🏆 80-100 Top
+    Weights: Vol/TVL 35 | APR Fees 25 | TVL 15 | Blue chip 15 | RSI bonus 10
+    """
+    ratio = vol_24h / tvl if tvl > 0 else 0.0
     score = 0.0
-    if tvl > 0:
-        score += min(40.0, (vol_24h / tvl) * 20.0)
-    if rsi is not None and rsi < 50:
-        score += 20.0
-    if tvl >= 500_000:
-        score += 10.0
-    if blue_chips >= 2:
-        score += 15.0
-    elif blue_chips == 1:
-        score += 10.0
+
+    # Vol/TVL ratio — 35 pts
+    if   ratio >= 5.0: score += 35.0
+    elif ratio >= 3.0: score += 30.0
+    elif ratio >= 2.0: score += 25.0
+    elif ratio >= 1.5: score += 21.0
+    elif ratio >= 1.0: score += 17.0
+    elif ratio >= 0.5: score += 10.0
+
+    # APR Fees real — 25 pts (calibrado para el rango Orca: MIN_APR=500%)
+    if   apr >= 3000: score += 25.0
+    elif apr >= 2000: score += 22.0
+    elif apr >= 1000: score += 18.0
+    elif apr >=  700: score += 15.0
+    elif apr >=  500: score += 12.0
+
+    # TVL absoluto — 15 pts
+    if   tvl >= 2_000_000: score += 15.0
+    elif tvl >= 1_000_000: score += 13.0
+    elif tvl >=   500_000: score += 11.0
+    elif tvl >=   300_000: score +=  9.0
+    elif tvl >=   100_000: score +=  7.0
+    elif tvl >=    50_000: score +=  4.0
+
+    # Blue chip bonus — 15 pts
+    if   blue_chips >= 2: score += 15.0
+    elif blue_chips == 1: score += 10.0
+
+    # RSI bonus — 10 pts (sobrevendido = mejor entrada)
+    if rsi is not None:
+        if   rsi < 30: score += 10.0
+        elif rsi < 50: score +=  5.0
+
+    # Garantías de piso
+    if apr > 500 and ratio > 1.0:
+        score = max(score, 45.0)
+    if apr > 1000 and ratio > 3.0:
+        score = max(score, 72.0)
+
     return int(min(100, score))
 
 
@@ -143,7 +184,7 @@ def _fmt_apr_rango(val: float | None) -> str:
 def _hard_block(m: dict) -> tuple[bool, str]:
     """Return (True, reason) if this pool must be dropped before alerting."""
     # 1. LP Score < 30
-    lp = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("rsi"), _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
+    lp = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("rsi"), _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")), m.get("apr", 0.0))
     print(f"[hard_block] {m.get('name', '')} — LP Score: {lp}/100, TVL: ${m.get('tvl', 0):,.0f}")
     if lp < HARD_MIN_LP_SCORE:
         return True, f"LP Score {lp} < {HARD_MIN_LP_SCORE}"
@@ -291,8 +332,8 @@ def build_new_alert(m: dict) -> str:
     rsi       = m.get("rsi")
     rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
     rsi_emoji = "" if rsi is None else ("🟢" if rsi < 30 else ("🟡" if rsi < 50 else ("🟠" if rsi < 70 else "🔴")))
-    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
-    lp_emoji  = "🟢" if lp >= 70 else ("🟡" if lp >= 50 else "🔴")
+    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")), m.get("apr", 0.0))
+    lp_emoji  = "🏆" if lp >= 80 else ("🟢" if lp >= 60 else ("🟡" if lp >= 40 else "🔴"))
     tvl       = m["tvl"]
     vol_24h   = m["vol_24h"]
     fees_24h  = m["fees_24h"]
@@ -324,8 +365,8 @@ def build_new_alert(m: dict) -> str:
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
     rsi       = m.get("rsi")
     rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
-    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")))
-    lp_emoji  = "🟢" if lp >= 70 else ("🟡" if lp >= 50 else "🔴")
+    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")), m.get("apr", 0.0))
+    lp_emoji  = "🏆" if lp >= 80 else ("🟢" if lp >= 60 else ("🟡" if lp >= 40 else "🔴"))
     fees_1k   = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
     purl      = f"https://birdeye.so/pool/{m['address']}?chain=solana"
     sep       = "━" * 19
