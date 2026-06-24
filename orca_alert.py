@@ -328,6 +328,13 @@ def fmt_money(value: float) -> str:
     return f"${value:.0f}"
 
 
+def _fmt_addr(addr: str) -> str:
+    """Shorten a contract address: 0x1234...abcd (first 6 + last 4 chars)."""
+    if not addr or len(addr) < 10:
+        return addr
+    return f"{addr[:6]}...{addr[-4:]}"
+
+
 def build_new_alert(m: dict) -> str:
     rsi       = m.get("rsi")
     rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
@@ -347,6 +354,7 @@ def build_new_alert(m: dict) -> str:
     W         = 19
     body_lines = [
         f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
+        f"{'Contrato:':<{W}}{_fmt_addr(m.get('address', ''))}",
         f"{'TVL:':<{W}}{fmt_money(tvl)}",
         f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
         f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
@@ -373,6 +381,7 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     W         = 19
     body_lines = [
         f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
+        f"{'Contrato:':<{W}}{_fmt_addr(m.get('address', ''))}",
         f"{'Motivo:':<{W}}{reason}",
         f"{'TVL:':<{W}}{fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})",
         f"{'Vol 24h:':<{W}}{fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})",
