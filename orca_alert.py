@@ -344,7 +344,10 @@ def _fmt_addr(addr: str) -> str:
     """Shorten a contract address: 0x1234...abcd (first 6 + last 4 chars)."""
     if not addr or len(addr) < 10:
         return addr
-    return f"{addr[:6]}...{addr[-4:]} 📋"
+    return f"{addr[:6]}...{addr[-4:]}"
+
+def _dexscreener_url(address: str) -> str:
+    return f"https://dexscreener.com/solana/{address}"
 
 
 # ── Meteora DLMM fetchers ─────────────────────────────────────────────────────
@@ -576,9 +579,9 @@ def build_new_alert(m: dict) -> str:
     purl      = f"https://birdeye.so/pool/{m['address']}?chain=solana"
     sep       = "━" * 19
     W         = 19
+    addr      = m.get("address", "")
     body_lines = [
         f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
-        f"{'Contrato:':<{W}}{_fmt_addr(m.get('address', ''))}",
         f"{'TVL:':<{W}}{fmt_money(tvl)}",
         f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
         f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
@@ -591,8 +594,9 @@ def build_new_alert(m: dict) -> str:
     dex       = m.get("dex", "Orca")
     header    = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
     fees_bold = f"<b>Fees/día rango ($1K): ${fees_1k:.2f}</b>"
+    addr_link = f'Contrato: <a href="{_dexscreener_url(addr)}">{_fmt_addr(addr)}</a>'
     body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    return f'{header}\n{fees_bold}\n{addr_link}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
@@ -604,9 +608,9 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     purl      = f"https://birdeye.so/pool/{m['address']}?chain=solana"
     sep       = "━" * 19
     W         = 19
+    addr      = m.get("address", "")
     body_lines = [
         f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
-        f"{'Contrato:':<{W}}{_fmt_addr(m.get('address', ''))}",
         f"{'Motivo:':<{W}}{reason}",
         f"{'TVL:':<{W}}{fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})",
         f"{'Vol 24h:':<{W}}{fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})",
@@ -617,8 +621,9 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     dex       = m.get("dex", "Orca")
     header    = f"⚠️ POOL DECLIVE — {dex} | SOL"
     fees_bold = f"<b>Fees/día rango ($1K): ${fees_1k:.2f}</b>"
+    addr_link = f'Contrato: <a href="{_dexscreener_url(addr)}">{_fmt_addr(addr)}</a>'
     body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    return f'{header}\n{fees_bold}\n{addr_link}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def main() -> None:
