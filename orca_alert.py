@@ -58,6 +58,11 @@ METEORA_MIN_TVL  = 200_000
 METEORA_MIN_VOL  = 100_000
 METEORA_FEE_EST  = 0.0010  # 0.10% default fee estimate when official API is unavailable
 
+# ── Raydium CLMM ──────────────────────────────────────────────────────────────
+RAYDIUM_CLMM_URL = "https://api-v3.raydium.io/pools/info/list"
+RAYDIUM_MIN_TVL  = 200_000
+RAYDIUM_MIN_VOL  = 100_000
+
 
 def _calc_rsi(closes: list[float], period: int = 14) -> float | None:
     if len(closes) < period + 1:
@@ -474,6 +479,86 @@ def fetch_meteora_dlmm(top100_ids: set[str]) -> list[dict]:
     return result
 
 
+# ── Raydium CLMM fetcher ──────────────────────────────────────────────────────
+
+def fetch_raydium_clmm(top100_ids: set[str]) -> list[dict]:
+    """Fetch qualifying Raydium CLMM pools from the official Raydium v3 API."""
+    result = []
+    seen   = set()
+    for page in range(1, 6):
+        try:
+            r = requests.get(
+                RAYDIUM_CLMM_URL,
+                params={
+                    "poolType":      "concentrated",
+                    "poolSortField": "volume24h",
+                    "sortType":      "desc",
+                    "pageSize":      100,
+                    "page":          page,
+                },
+                timeout=20,
+            )
+            if not r.ok:
+                print(f"[Raydium CLMM] HTTP {r.status_code} on page {page}")
+                break
+            body = r.json()
+            if not body.get("success"):
+                break
+            pools = body.get("data", {}).get("data", [])
+            if not pools:
+                break
+
+            any_above_vol = False
+            for p in pools:
+                pid = p.get("id", "")
+                if not pid or pid in seen:
+                    continue
+                tvl     = float(p.get("tvl") or 0)
+                day     = p.get("day", {})
+                vol_24h = float(day.get("volume") or 0)
+                if vol_24h >= RAYDIUM_MIN_VOL:
+                    any_above_vol = True
+                if tvl < RAYDIUM_MIN_TVL or vol_24h < RAYDIUM_MIN_VOL:
+                    continue
+                seen.add(pid)
+                fees_24h = float(day.get("volumeFee") or 0)
+                fee_rate = float(p.get("feeRate") or 0)
+                apr      = float(day.get("feeApr") or 0)
+                if apr == 0 and tvl > 0:
+                    apr = (fees_24h / tvl) * 365 * 100
+                sym_a    = ((p.get("mintA") or {}).get("symbol") or "?").strip()
+                sym_b    = ((p.get("mintB") or {}).get("symbol") or "?").strip()
+                in_top100 = (sym_a.upper() in BLUE_CHIP_TOKENS) or (sym_b.upper() in BLUE_CHIP_TOKENS)
+                fee_str  = f"{fee_rate * 100:.2f}%"
+                result.append({
+                    "address":   pid,
+                    "name":      f"{sym_a}/{sym_b} ({fee_str})",
+                    "symbol_a":  sym_a,
+                    "symbol_b":  sym_b,
+                    "cg_id_a":   None,
+                    "cg_id_b":   None,
+                    "fee_rate":  fee_rate,
+                    "tvl":       tvl,
+                    "vol_24h":   vol_24h,
+                    "fees_24h":  fees_24h,
+                    "apr":       apr,
+                    "in_top100": in_top100,
+                    "badge":     "🟢" if in_top100 else "🟡",
+                    "dex":       "Raydium CLMM",
+                })
+
+            if not any_above_vol:
+                break  # all pools on this page are below min vol, no point paginating
+            if not body.get("data", {}).get("hasNextPage"):
+                break
+        except Exception as exc:
+            print(f"[Raydium CLMM] page {page}: {exc}")
+            break
+
+    result.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
+    return result
+
+
 def build_new_alert(m: dict) -> str:
     rsi       = m.get("rsi")
     rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
@@ -689,14 +774,79 @@ def main() -> None:
             prev["last_tvl"]     = m["tvl"]
             prev["last_vol_24h"] = m["vol_24h"]
 
+    # ── Raydium CLMM ─────────────────────────────────────────────────────────
+    print(f"[{now_iso}] Fetching Raydium CLMM pools…")
+    raydium_alerted: dict = state.setdefault("raydium_alerted", {})
+    raydium_pools = fetch_raydium_clmm(top100_ids)
+    print(f"[{now_iso}] {len(raydium_pools)} Raydium CLMM pools pass TVL/Vol filters")
+
+    for m in raydium_pools:
+        sym_a = m.get("symbol_a", "")
+        sym_b = m.get("symbol_b", "")
+        if sym_a.lower() not in _STABLE_SYMS:
+            cg_id, sym = None, sym_a
+        elif sym_b.lower() not in _STABLE_SYMS:
+            cg_id, sym = None, sym_b
+        else:
+            cg_id, sym = None, ""
+        m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
+
+    for m in raydium_pools:
+        pid = m["address"]
+        if pid not in raydium_alerted:
+            _blocked, _reason = _hard_block(m)
+            if _blocked:
+                print(f"[RAYDIUM-SKIP] {m['name']} — {_reason}")
+            elif send_telegram(build_new_alert(m)):
+                alerts_sent += 1
+            raydium_alerted[pid] = {
+                "first_seen":      now_iso,
+                "last_alert":      now_iso,
+                "last_tvl":        m["tvl"],
+                "last_vol_24h":    m["vol_24h"],
+                "alerted_decline": False,
+                "name":            m["name"],
+            }
+        else:
+            prev     = raydium_alerted[pid]
+            prev_tvl = prev.get("last_tvl", m["tvl"])
+            prev_vol = prev.get("last_vol_24h", m["vol_24h"])
+
+            if not prev.get("alerted_decline"):
+                tvl_chg      = (m["tvl"] - prev_tvl) / prev_tvl if prev_tvl > 0 else 0
+                vol_chg      = (m["vol_24h"] - prev_vol) / prev_vol if prev_vol > 0 else 0
+                prev_vol_tvl = prev_vol / prev_tvl if prev_tvl > 0 else 0
+                curr_vol_tvl = m["vol_24h"] / m["tvl"] if m["tvl"] > 0 else 0
+                vol_tvl_chg  = (curr_vol_tvl - prev_vol_tvl) / prev_vol_tvl if prev_vol_tvl > 0 else 0
+
+                decline_reason = None
+                if tvl_chg <= -(DECLINE_TVL_PCT / 100):
+                    decline_reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
+                elif vol_chg <= -(DECLINE_VOL_PCT / 100):
+                    decline_reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                elif vol_tvl_chg <= -(DECLINE_VOL_TVL_PCT / 100):
+                    decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
+
+                if decline_reason:
+                    _blocked, _reason = _hard_block(m)
+                    if _blocked:
+                        print(f"[RAYDIUM-SKIP-DECLINE] {m['name']} — {_reason}")
+                    elif send_telegram(build_decline_alert(m, decline_reason, prev_tvl, prev_vol)):
+                        alerts_sent += 1
+                    prev["alerted_decline"] = True
+
+            prev["last_tvl"]     = m["tvl"]
+            prev["last_vol_24h"] = m["vol_24h"]
+
     state["last_run"] = now_iso
     state["qualifying_count"] = len(qualifying)
     state["meteora_qualifying_count"] = len(meteora_pools)
+    state["raydium_qualifying_count"] = len(raydium_pools)
     save_state(state)
 
     print(
         f"[{now_iso}] Done. Alerts sent: {alerts_sent}. "
-        f"Orca tracked: {len(alerted)}. Meteora tracked: {len(meteora_alerted)}."
+        f"Orca: {len(alerted)}. Meteora: {len(meteora_alerted)}. Raydium: {len(raydium_alerted)}."
     )
 
 
