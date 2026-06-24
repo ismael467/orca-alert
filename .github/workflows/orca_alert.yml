@@ -5,6 +5,10 @@ on:
     - cron: "*/5 * * * *"   # every 5 minutes
   workflow_dispatch:          # allow manual run from GitHub UI
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: write             # needed to commit state.json
 
