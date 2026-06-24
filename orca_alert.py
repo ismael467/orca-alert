@@ -344,7 +344,7 @@ def _fmt_addr(addr: str) -> str:
     """Shorten a contract address: 0x1234...abcd (first 6 + last 4 chars)."""
     if not addr or len(addr) < 10:
         return addr
-    return f"{addr[:6]}...{addr[-4:]}"
+    return f"{addr[:6]}...{addr[-4:]} 📋"
 
 
 # ── Meteora DLMM fetchers ─────────────────────────────────────────────────────
@@ -583,16 +583,16 @@ def build_new_alert(m: dict) -> str:
         f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
         f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
         sep,
-        f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
         f"{'APR Fees:':<{W}}{apr:,.0f}%",
         sep,
         f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
         f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
     ]
-    dex    = m.get("dex", "Orca")
-    header = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
-    body   = "\n".join(body_lines)
-    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    dex       = m.get("dex", "Orca")
+    header    = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
+    fees_bold = f"<b>Fees/día rango ($1K): ${fees_1k:.2f}</b>"
+    body      = "\n".join(body_lines)
+    return f'{header}\n{fees_bold}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
@@ -611,14 +611,14 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
         f"{'TVL:':<{W}}{fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})",
         f"{'Vol 24h:':<{W}}{fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})",
         sep,
-        f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
         f"{'RSI:':<{W}}{rsi_str}",
         f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
     ]
-    dex    = m.get("dex", "Orca")
-    header = f"⚠️ POOL DECLIVE — {dex} | SOL"
-    body   = "\n".join(body_lines)
-    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    dex       = m.get("dex", "Orca")
+    header    = f"⚠️ POOL DECLIVE — {dex} | SOL"
+    fees_bold = f"<b>Fees/día rango ($1K): ${fees_1k:.2f}</b>"
+    body      = "\n".join(body_lines)
+    return f'{header}\n{fees_bold}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def main() -> None:
