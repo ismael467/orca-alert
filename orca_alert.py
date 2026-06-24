@@ -51,6 +51,13 @@ BLUE_CHIP_TOKENS = {
     "cbBTC", "cbETH",
 }
 
+# ── Meteora DLMM ─────────────────────────────────────────────────────────────
+METEORA_DLMM_API = "https://dlmm-api.meteora.ag"   # official (use when available)
+METEORA_GT_URL   = "https://api.geckoterminal.com/api/v2/networks/solana/dexes/meteora/pools"
+METEORA_MIN_TVL  = 200_000
+METEORA_MIN_VOL  = 100_000
+METEORA_FEE_EST  = 0.0010  # 0.10% default fee estimate when official API is unavailable
+
 
 def _calc_rsi(closes: list[float], period: int = 14) -> float | None:
     if len(closes) < period + 1:
@@ -335,6 +342,138 @@ def _fmt_addr(addr: str) -> str:
     return f"{addr[:6]}...{addr[-4:]}"
 
 
+# ── Meteora DLMM fetchers ─────────────────────────────────────────────────────
+
+def _fetch_meteora_official() -> list[dict] | None:
+    """Try the official Meteora DLMM API. Returns raw pool list or None on failure."""
+    try:
+        r = requests.get(
+            f"{METEORA_DLMM_API}/pair/all_with_pagination",
+            params={"page": 0, "limit": 100, "sort_key": "volume", "order_by": "desc"},
+            timeout=20,
+        )
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        pairs = data.get("pairs", data.get("data", []))
+        if not pairs:
+            return None
+        result = []
+        for p in pairs:
+            tvl     = float(p.get("liquidity") or 0)
+            vol_24h = float(p.get("trade_volume_24h") or 0)
+            if tvl < METEORA_MIN_TVL or vol_24h < METEORA_MIN_VOL:
+                continue
+            fee_rate  = float(p.get("base_fee_percentage") or 10) / 100  # API gives %, e.g. "0.10"
+            fees_24h  = float(p.get("fees_24h") or p.get("today_fees") or vol_24h * fee_rate)
+            raw_name  = p.get("name", "")  # "SOL-USDC" format
+            parts     = raw_name.replace("-", "/").split("/")
+            sym_a     = parts[0].strip() if parts else "?"
+            sym_b     = parts[1].strip() if len(parts) > 1 else "?"
+            result.append({
+                "_source": "official",
+                "address": p.get("address", ""),
+                "sym_a": sym_a,
+                "sym_b": sym_b,
+                "tvl": tvl,
+                "vol_24h": vol_24h,
+                "fees_24h": fees_24h,
+                "fee_rate": fee_rate,
+            })
+        return result or None
+    except Exception as exc:
+        print(f"[Meteora API] {exc}")
+        return None
+
+
+def _fetch_meteora_geckoterminal() -> list[dict]:
+    """Fetch Meteora pools via GeckoTerminal (fallback). Paginates up to 5 pages."""
+    result = []
+    seen   = set()
+    for page in range(1, 6):
+        try:
+            r = requests.get(
+                METEORA_GT_URL,
+                params={"page": page, "sort": "h24_volume_usd_desc"},
+                headers={"Accept": "application/json"},
+                timeout=20,
+            )
+            if not r.ok:
+                break
+            pools = r.json().get("data", [])
+            if not pools:
+                break
+            for p in pools:
+                a       = p.get("attributes", {})
+                addr    = a.get("address", "")
+                if not addr or addr in seen:
+                    continue
+                tvl     = float(a.get("reserve_in_usd") or 0)
+                vol_24h = float((a.get("volume_usd") or {}).get("h24") or 0)
+                if tvl < METEORA_MIN_TVL or vol_24h < METEORA_MIN_VOL:
+                    continue
+                seen.add(addr)
+                name    = a.get("name", "")   # "SOL / USDC"
+                parts   = name.split("/")
+                sym_a   = parts[0].strip() if parts else "?"
+                sym_b   = parts[1].strip() if len(parts) > 1 else "?"
+                fees_24h = vol_24h * METEORA_FEE_EST
+                result.append({
+                    "_source": "geckoterminal",
+                    "address": addr,
+                    "sym_a": sym_a,
+                    "sym_b": sym_b,
+                    "tvl": tvl,
+                    "vol_24h": vol_24h,
+                    "fees_24h": fees_24h,
+                    "fee_rate": METEORA_FEE_EST,
+                })
+        except Exception as exc:
+            print(f"[GeckoTerminal/Meteora] page {page}: {exc}")
+            break
+    return result
+
+
+def fetch_meteora_dlmm(top100_ids: set[str]) -> list[dict]:
+    """Return qualifying Meteora DLMM pools as m-dicts compatible with existing alert functions."""
+    raw_pools = _fetch_meteora_official() or _fetch_meteora_geckoterminal()
+
+    result = []
+    for raw in raw_pools:
+        sym_a    = raw["sym_a"]
+        sym_b    = raw["sym_b"]
+        tvl      = raw["tvl"]
+        vol_24h  = raw["vol_24h"]
+        fees_24h = raw["fees_24h"]
+        apr      = (fees_24h / tvl) * 365 * 100 if tvl > 0 else 0.0
+
+        in_top100 = (sym_a.upper() in BLUE_CHIP_TOKENS) or (sym_b.upper() in BLUE_CHIP_TOKENS)
+        fee_str   = f"{raw['fee_rate'] * 100:.2f}%"
+        if raw.get("_source") == "geckoterminal":
+            fee_str += "~"  # indicates fee rate is estimated, not from official API
+        name = f"{sym_a}/{sym_b} ({fee_str})"
+
+        result.append({
+            "address":   raw["address"],
+            "name":      name,
+            "symbol_a":  sym_a,
+            "symbol_b":  sym_b,
+            "cg_id_a":   None,
+            "cg_id_b":   None,
+            "fee_rate":  raw["fee_rate"],
+            "tvl":       tvl,
+            "vol_24h":   vol_24h,
+            "fees_24h":  fees_24h,
+            "apr":       apr,
+            "in_top100": in_top100,
+            "badge":     "🟢" if in_top100 else "🟡",
+            "dex":       "Meteora DLMM",
+        })
+
+    result.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
+    return result
+
+
 def build_new_alert(m: dict) -> str:
     rsi       = m.get("rsi")
     rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
@@ -365,7 +504,8 @@ def build_new_alert(m: dict) -> str:
         f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
         f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
     ]
-    header = f"🚨 NUEVA OPORTUNIDAD — Orca | SOL {badge}"
+    dex    = m.get("dex", "Orca")
+    header = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
     body   = "\n".join(body_lines)
     return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
@@ -390,7 +530,8 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
         f"{'RSI:':<{W}}{rsi_str}",
         f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
     ]
-    header = f"⚠️ POOL DECLIVE — Orca | SOL"
+    dex    = m.get("dex", "Orca")
+    header = f"⚠️ POOL DECLIVE — {dex} | SOL"
     body   = "\n".join(body_lines)
     return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
@@ -484,13 +625,78 @@ def main() -> None:
             prev["last_tvl"] = m["tvl"]
             prev["last_vol_24h"] = m["vol_24h"]
 
+    # ── Meteora DLMM ─────────────────────────────────────────────────────────
+    print(f"[{now_iso}] Fetching Meteora DLMM pools…")
+    meteora_alerted: dict = state.setdefault("meteora_alerted", {})
+    meteora_pools = fetch_meteora_dlmm(top100_ids)
+    print(f"[{now_iso}] {len(meteora_pools)} Meteora pools pass TVL/Vol filters")
+
+    for m in meteora_pools:
+        sym_a = m.get("symbol_a", "")
+        sym_b = m.get("symbol_b", "")
+        if sym_a.lower() not in _STABLE_SYMS:
+            cg_id, sym = None, sym_a
+        elif sym_b.lower() not in _STABLE_SYMS:
+            cg_id, sym = None, sym_b
+        else:
+            cg_id, sym = None, ""
+        m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
+
+    for m in meteora_pools:
+        pid = m["address"]
+        if pid not in meteora_alerted:
+            _blocked, _reason = _hard_block(m)
+            if _blocked:
+                print(f"[METEORA-SKIP] {m['name']} — {_reason}")
+            elif send_telegram(build_new_alert(m)):
+                alerts_sent += 1
+            meteora_alerted[pid] = {
+                "first_seen":      now_iso,
+                "last_alert":      now_iso,
+                "last_tvl":        m["tvl"],
+                "last_vol_24h":    m["vol_24h"],
+                "alerted_decline": False,
+                "name":            m["name"],
+            }
+        else:
+            prev     = meteora_alerted[pid]
+            prev_tvl = prev.get("last_tvl", m["tvl"])
+            prev_vol = prev.get("last_vol_24h", m["vol_24h"])
+
+            if not prev.get("alerted_decline"):
+                tvl_chg      = (m["tvl"] - prev_tvl) / prev_tvl if prev_tvl > 0 else 0
+                vol_chg      = (m["vol_24h"] - prev_vol) / prev_vol if prev_vol > 0 else 0
+                prev_vol_tvl = prev_vol / prev_tvl if prev_tvl > 0 else 0
+                curr_vol_tvl = m["vol_24h"] / m["tvl"] if m["tvl"] > 0 else 0
+                vol_tvl_chg  = (curr_vol_tvl - prev_vol_tvl) / prev_vol_tvl if prev_vol_tvl > 0 else 0
+
+                decline_reason = None
+                if tvl_chg <= -(DECLINE_TVL_PCT / 100):
+                    decline_reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
+                elif vol_chg <= -(DECLINE_VOL_PCT / 100):
+                    decline_reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                elif vol_tvl_chg <= -(DECLINE_VOL_TVL_PCT / 100):
+                    decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
+
+                if decline_reason:
+                    _blocked, _reason = _hard_block(m)
+                    if _blocked:
+                        print(f"[METEORA-SKIP-DECLINE] {m['name']} — {_reason}")
+                    elif send_telegram(build_decline_alert(m, decline_reason, prev_tvl, prev_vol)):
+                        alerts_sent += 1
+                    prev["alerted_decline"] = True
+
+            prev["last_tvl"]     = m["tvl"]
+            prev["last_vol_24h"] = m["vol_24h"]
+
     state["last_run"] = now_iso
     state["qualifying_count"] = len(qualifying)
+    state["meteora_qualifying_count"] = len(meteora_pools)
     save_state(state)
 
     print(
         f"[{now_iso}] Done. Alerts sent: {alerts_sent}. "
-        f"Tracked pools: {len(alerted)}."
+        f"Orca tracked: {len(alerted)}. Meteora tracked: {len(meteora_alerted)}."
     )
 
 
