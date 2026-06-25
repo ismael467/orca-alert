@@ -133,7 +133,7 @@ def _fetch_rsi(cg_id: str | None, symbol: str, cache: dict) -> float | None:
 
 def _blue_chip_count(sym_a: str, sym_b: str) -> int:
     """Return 0, 1, or 2: how many of the two symbols are in BLUE_CHIP_TOKENS."""
-    return sum(1 for s in (sym_a.upper(), sym_b.upper()) if s in BLUE_CHIP_TOKENS)
+    return sum(1 for s in (str(sym_a).upper(), str(sym_b).upper()) if s in BLUE_CHIP_TOKENS)
 
 
 def _lp_score(
@@ -464,7 +464,7 @@ def fetch_meteora_dlmm(top100_ids: set[str]) -> list[dict]:
         fees_24h = raw["fees_24h"]
         apr      = (fees_24h / tvl) * 365 * 100 if tvl > 0 else 0.0
 
-        in_top100 = (sym_a.upper() in BLUE_CHIP_TOKENS) or (sym_b.upper() in BLUE_CHIP_TOKENS)
+        in_top100 = (str(sym_a).upper() in BLUE_CHIP_TOKENS) or (str(sym_b).upper() in BLUE_CHIP_TOKENS)
         fee_str   = f"{raw['fee_rate'] * 100:.2f}%"
         if raw.get("_source") == "geckoterminal":
             fee_str += "~"  # indicates fee rate is estimated, not from official API
@@ -540,7 +540,7 @@ def fetch_raydium_clmm(top100_ids: set[str]) -> list[dict]:
                     apr = (fees_24h / tvl) * 365 * 100
                 sym_a    = ((p.get("mintA") or {}).get("symbol") or "?").strip()
                 sym_b    = ((p.get("mintB") or {}).get("symbol") or "?").strip()
-                in_top100 = (sym_a.upper() in BLUE_CHIP_TOKENS) or (sym_b.upper() in BLUE_CHIP_TOKENS)
+                in_top100 = (str(sym_a).upper() in BLUE_CHIP_TOKENS) or (str(sym_b).upper() in BLUE_CHIP_TOKENS)
                 fee_str  = f"{fee_rate * 100:.2f}%"
                 result.append({
                     "address":   pid,
