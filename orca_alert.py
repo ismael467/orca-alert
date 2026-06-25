@@ -652,9 +652,10 @@ def build_new_alert(m: dict) -> str:
     dex       = m.get("dex", "Orca")
     header    = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
     fees_bold = f"<b>Fees/día rango ($1K): ${fees_1k:.2f}</b>"
-    addr_link = f'Contrato: <a href="{_dexscreener_url(addr)}">{_fmt_addr(addr)}</a>'
+    addr_line = f"Contrato: {_fmt_addr(addr)}"
+    dex_line  = f'🔍 <a href="{_dexscreener_url(addr)}">DexScreener</a>'
     body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n{addr_link}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    return f'{header}\n{fees_bold}\n{addr_line}\n{dex_line}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
@@ -679,9 +680,10 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     dex       = m.get("dex", "Orca")
     header    = f"⚠️ POOL DECLIVE — {dex} | SOL"
     fees_bold = f"<b>Fees/día rango ($1K): ${fees_1k:.2f}</b>"
-    addr_link = f'Contrato: <a href="{_dexscreener_url(addr)}">{_fmt_addr(addr)}</a>'
+    addr_line = f"Contrato: {_fmt_addr(addr)}"
+    dex_line  = f'🔍 <a href="{_dexscreener_url(addr)}">DexScreener</a>'
     body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n{addr_link}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    return f'{header}\n{fees_bold}\n{addr_line}\n{dex_line}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
 
 
 def main() -> None:
