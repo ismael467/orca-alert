@@ -9,7 +9,7 @@ State:      state.json committed to repo with [skip ci]
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import requests
@@ -31,6 +31,7 @@ MAX_TVL = 5_000_000
 DECLINE_TVL_PCT     = 50
 DECLINE_VOL_PCT     = 60
 DECLINE_VOL_TVL_PCT = 40   # alert if Vol/TVL ratio drops >40% vs previous run
+ALERT_COOLDOWN_H    = 4    # minimum hours between any alerts for the same pool
 
 # ── Hard-block filter constants ──────────────────────────────────────────────
 HARD_MIN_LP_SCORE  = 40
@@ -60,6 +61,10 @@ METEORA_FEE_EST  = 0.0010  # 0.10% default fee estimate when official API is una
 
 # ── Raydium CLMM ──────────────────────────────────────────────────────────────
 RAYDIUM_CLMM_URL = "https://api-v3.raydium.io/pools/info/list"
+
+# ── Merkl reward campaigns ─────────────────────────────────────────────────────
+MERKL_BASE   = "https://api.merkl.xyz/v4/opportunities"
+_MERKL_CHAIN = {"Solana": 101}
 RAYDIUM_MIN_TVL  = 200_000
 RAYDIUM_MIN_VOL  = 100_000
 
@@ -308,6 +313,10 @@ def compute_metrics(pool: dict, top100_ids: set[str]) -> dict | None:
 
 
 def passes_filters(m: dict) -> bool:
+    if _lp_score(m["vol_24h"], m["tvl"], None,
+                 _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")),
+                 m.get("apr", 0.0)) < HARD_MIN_LP_SCORE:
+        return False
     return (
         m["apr"] >= MIN_APR_PCT
         and m["vol_24h"] >= MIN_VOL_24H
@@ -562,6 +571,54 @@ def fetch_raydium_clmm(top100_ids: set[str]) -> list[dict]:
     return result
 
 
+def _fetch_merkl_bulk(cache: dict, chain_label: str) -> dict[str, dict]:
+    """Fetch active Merkl campaigns for a chain. Returns {pool_addr: {merkl_apr, days_left}}."""
+    chain_id = _MERKL_CHAIN.get(chain_label)
+    if not chain_id:
+        return {}
+    key = f"_merkl_{chain_id}"
+    if key in cache:
+        return cache[key]
+    result: dict[str, dict] = {}
+    try:
+        resp = requests.get(
+            f"{MERKL_BASE}?chainId={chain_id}&status=LIVE",
+            timeout=20,
+        )
+        if resp.status_code == 200:
+            now_ts = datetime.now(timezone.utc).timestamp()
+            for opp in resp.json():
+                addr = (opp.get("identifier") or "").lower()
+                apr  = float(opp.get("totalApr") or 0)
+                end  = int(opp.get("latestCampaignEnd") or 0)
+                if addr and apr > 0:
+                    days_left = max(0, int((end - now_ts) / 86400)) if end else None
+                    result[addr] = {"merkl_apr": apr, "days_left": days_left}
+        else:
+            print(f"[Merkl] HTTP {resp.status_code} chainId={chain_id}")
+    except Exception as exc:
+        print(f"[Merkl] {exc}")
+    cache[key] = result
+    print(f"[Merkl] chainId={chain_id}: {len(result)} active pools")
+    return result
+
+
+def _get_merkl(address: str, chain_label: str, cache: dict) -> dict | None:
+    return _fetch_merkl_bulk(cache, chain_label).get(address.lower())
+
+
+def _merkl_lines(merkl: dict | None, apr: float, W: int) -> list[str]:
+    if not merkl:
+        return []
+    m_apr     = float(merkl.get("merkl_apr", 0))
+    days_left = merkl.get("days_left")
+    days_str  = f"{days_left}d" if days_left is not None else "N/D"
+    return [
+        f"{'APR Total:':<{W}}{apr + m_apr:,.0f}% (incl. {m_apr:.0f}% Merkl)",
+        f"{'Merkl:':<{W}}{days_str} restantes ✅",
+    ]
+
+
 def build_new_alert(m: dict) -> str:
     rsi       = m.get("rsi")
     rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
@@ -591,6 +648,7 @@ def build_new_alert(m: dict) -> str:
         f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
         f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
     ]
+    body_lines += _merkl_lines(m.get("merkl"), apr, W)
     dex       = m.get("dex", "Orca")
     header    = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
     fees_bold = f"<b>Fees/día rango ($1K): ${fees_1k:.2f}</b>"
@@ -627,7 +685,8 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
 
 
 def main() -> None:
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_utc = datetime.now(timezone.utc)
+    now_iso = now_utc.isoformat()
     state = load_state()
     alerted: dict = state.setdefault("alerted_pools", {})
 
@@ -663,6 +722,11 @@ def main() -> None:
             cg_id, sym = None, ""
         m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
 
+    merkl_cache: dict = {}
+    for m in qualifying:
+        m["merkl"] = _get_merkl(m["address"], "Solana", merkl_cache)
+
+    cutoff_4h = (now_utc - timedelta(hours=ALERT_COOLDOWN_H)).isoformat()
     alerts_sent = 0
     for m in qualifying:
         pid = m["address"]
@@ -703,13 +767,15 @@ def main() -> None:
                     decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
 
                 if decline_reason:
-                    _blocked, _reason = _hard_block(m)
-                    if _blocked:
-                        print(f"[SKIP-DECLINE] {m['name']} — {_reason}")
-                    elif send_telegram(
-                        build_decline_alert(m, decline_reason, prev_tvl, prev_vol)
-                    ):
-                        alerts_sent += 1
+                    if prev.get("last_alert", "") > cutoff_4h:
+                        print(f"[COOLDOWN] {m['name']} — decline within {ALERT_COOLDOWN_H}h cooldown")
+                    else:
+                        _blocked, _reason = _hard_block(m)
+                        if _blocked:
+                            print(f"[SKIP-DECLINE] {m['name']} — {_reason}")
+                        elif send_telegram(build_decline_alert(m, decline_reason, prev_tvl, prev_vol)):
+                            alerts_sent += 1
+                            prev["last_alert"] = now_iso
                     prev["alerted_decline"] = True
 
             prev["last_tvl"] = m["tvl"]
@@ -731,6 +797,7 @@ def main() -> None:
         else:
             cg_id, sym = None, ""
         m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
+        m["merkl"] = _get_merkl(m["address"], "Solana", merkl_cache)
 
     for m in meteora_pools:
         pid = m["address"]
@@ -769,11 +836,15 @@ def main() -> None:
                     decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
 
                 if decline_reason:
-                    _blocked, _reason = _hard_block(m)
-                    if _blocked:
-                        print(f"[METEORA-SKIP-DECLINE] {m['name']} — {_reason}")
-                    elif send_telegram(build_decline_alert(m, decline_reason, prev_tvl, prev_vol)):
-                        alerts_sent += 1
+                    if prev.get("last_alert", "") > cutoff_4h:
+                        print(f"[COOLDOWN] {m['name']} — meteora decline within {ALERT_COOLDOWN_H}h cooldown")
+                    else:
+                        _blocked, _reason = _hard_block(m)
+                        if _blocked:
+                            print(f"[METEORA-SKIP-DECLINE] {m['name']} — {_reason}")
+                        elif send_telegram(build_decline_alert(m, decline_reason, prev_tvl, prev_vol)):
+                            alerts_sent += 1
+                            prev["last_alert"] = now_iso
                     prev["alerted_decline"] = True
 
             prev["last_tvl"]     = m["tvl"]
@@ -795,6 +866,7 @@ def main() -> None:
         else:
             cg_id, sym = None, ""
         m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
+        m["merkl"] = _get_merkl(m["address"], "Solana", merkl_cache)
 
     for m in raydium_pools:
         pid = m["address"]
@@ -833,11 +905,15 @@ def main() -> None:
                     decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
 
                 if decline_reason:
-                    _blocked, _reason = _hard_block(m)
-                    if _blocked:
-                        print(f"[RAYDIUM-SKIP-DECLINE] {m['name']} — {_reason}")
-                    elif send_telegram(build_decline_alert(m, decline_reason, prev_tvl, prev_vol)):
-                        alerts_sent += 1
+                    if prev.get("last_alert", "") > cutoff_4h:
+                        print(f"[COOLDOWN] {m['name']} — raydium decline within {ALERT_COOLDOWN_H}h cooldown")
+                    else:
+                        _blocked, _reason = _hard_block(m)
+                        if _blocked:
+                            print(f"[RAYDIUM-SKIP-DECLINE] {m['name']} — {_reason}")
+                        elif send_telegram(build_decline_alert(m, decline_reason, prev_tvl, prev_vol)):
+                            alerts_sent += 1
+                            prev["last_alert"] = now_iso
                     prev["alerted_decline"] = True
 
             prev["last_tvl"]     = m["tvl"]
