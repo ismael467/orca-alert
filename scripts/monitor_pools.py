@@ -1844,6 +1844,9 @@ def main() -> None:
             continue
         if bluechip_alerted.get(pid, {}).get("last_alert", "") > cutoff_24h:
             continue
+        lp_score = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
+        if lp_score < 40:
+            continue
         if send_telegram(_build_bluechip_alert(m)):
             total += 1
         bluechip_alerted[pid] = {"last_alert": now_iso}
