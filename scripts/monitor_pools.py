@@ -19,6 +19,7 @@ State is namespaced by DEX in state_monitor.json and committed with [skip ci].
 
 import json
 import os
+import html
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -511,6 +512,19 @@ def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, sym_a
     return f"{emoji} LP Score: {s}/100"
 
 
+def _lp_label(score: int) -> str:
+    if score >= 80: return "Excelente"
+    if score >= 60: return "Bueno"
+    if score >= 40: return "Regular"
+    return "Bajo"
+
+
+def _fmt_addr(addr: str) -> str:
+    if not addr or len(addr) < 10:
+        return addr or "N/D"
+    return f"{addr[:6]}…{addr[-4:]}"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # TOP 5 summary helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -620,33 +634,35 @@ def _build_bluechip_alert(m: dict) -> str:
     fees_24h = m.get("fees_24h", 0)
     tvl      = m.get("tvl", 0)
     fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
+    fees_7d  = fees_1k * 7
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi_val  = m.get("rsi")
     rsi_str  = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
-    rsi_emoji = "" if rsi_val is None else ("🟢" if rsi_val < 30 else ("🟡" if rsi_val < 50 else ("🟠" if rsi_val < 70 else "🔴")))
     lp_score = _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
-    lp_emoji = "🟢" if lp_score >= 70 else ("🟡" if lp_score >= 50 else "🔴")
-    apr_rng  = f"{apr / 0.20:,.0f}%"
-    sep      = "━" * 19
-    W        = 19
+    apr_rng  = f"{min(apr / 0.20, apr * 3):,.0f}%"
     pool_url = m.get("pool_url", "")
-    body_lines = [
-        f"{'Pool:':<{W}}{m.get('name', '')}",
-        f"{'TVL:':<{W}}{fmt_money(tvl)}",
-        f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
-        f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
-        sep,
-        f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
-        f"{'APR Fees:':<{W}}{apr:,.0f}%",
-        f"{'APR rango ±10%:':<{W}}{apr_rng}",
-        sep,
-        f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
-        f"{'LP Score:':<{W}}{lp_score}/100 {lp_emoji}",
-    ]
-    header = f"🔵 OPORTUNIDAD ESTABLE — {source}"
-    body   = "\n".join(body_lines)
-    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{pool_url}">{source}</a>'
+    addr     = m.get("address", "")
+    sym_a    = m.get("sym_a", "?")
+    sym_b    = m.get("sym_b", "?")
+    return (
+        f"🔵 OPORTUNIDAD ESTABLE — {source}\n"
+        f"{sym_a} / {sym_b}\n"
+        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
+        f"⭐ LP Score: {lp_score}/100 ({_lp_label(lp_score)})\n"
+        f"\n"
+        f"💧 TVL: {fmt_money(tvl)}\n"
+        f"📈 Vol 24h: {fmt_money(vol_24h)}\n"
+        f"🔄 Vol/TVL: {vol_tvl:.2f}x{fire}\n"
+        f"⚡ APR Fees: {apr:,.0f}%\n"
+        f"🚀 APR rango ±10%: {apr_rng}\n"
+        f"📉 RSI: {rsi_str}\n"
+        f"\n"
+        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{pool_url}">{source}</a>\n'
+        f"━━━━━━━━━━━━━━━"
+    )
 
 
 def _update_pool_cache(pool_cache: dict, qualifying: list[dict], now_iso: str) -> None:
@@ -848,35 +864,36 @@ def _build_new_alert(m: dict, label: str) -> str:
     apr      = m.get("apr", 0)
     range_str, apr_rango_str, _ = _range_parts(m)
     fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
+    fees_7d  = fees_1k * 7
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi      = m.get("rsi")
     rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
-    rsi_emoji = "" if rsi is None else ("🟢" if rsi < 30 else ("🟡" if rsi < 50 else ("🟠" if rsi < 70 else "🔴")))
     lp       = _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
-    lp_emoji = "🟢" if lp >= 70 else ("🟡" if lp >= 50 else "🔴")
-    sep      = "━" * 19
-    W        = 19
     pool_url = m.get("pool_url", "")
-    body_lines = [
-        f"{'Pool:':<{W}}{m.get('name', '')}",
-        f"{'TVL:':<{W}}{fmt_money(tvl)}",
-        f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
-        f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
-        sep,
-        f"{'Rango sugerido:':<{W}}{range_str}",
-        f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
-        f"{'APR Fees:':<{W}}{apr:,.0f}%",
-    ]
-    if apr_rango_str:
-        body_lines.append(f"{'APR Fees rango:':<{W}}{apr_rango_str}")
-    body_lines += [
-        sep,
-        f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
-        f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
-    ]
-    body = "\n".join(body_lines)
-    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{pool_url}">{dex}</a>'
+    addr     = m.get("address", "")
+    sym_a    = m.get("sym_a", "?")
+    sym_b    = m.get("sym_b", "?")
+    apr_rango_line = f"🚀 APR Rango: {apr_rango_str}\n" if apr_rango_str else ""
+    return (
+        f"{header}\n"
+        f"{sym_a} / {sym_b}\n"
+        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
+        f"🎯 Rango sugerido: {range_str}\n"
+        f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
+        f"\n"
+        f"💧 TVL: {fmt_money(tvl)}\n"
+        f"📈 Vol 24h: {fmt_money(vol_24h)}\n"
+        f"🔄 Vol/TVL: {vol_tvl:.2f}x{fire}\n"
+        f"⚡ APR Fees: {apr:,.0f}%\n"
+        f"{apr_rango_line}"
+        f"📉 RSI: {rsi_str}\n"
+        f"\n"
+        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{pool_url}">{dex}</a>\n'
+        f"━━━━━━━━━━━━━━━"
+    )
 
 
 def _build_new_decline(
@@ -885,20 +902,23 @@ def _build_new_decline(
     dex      = m.get("_dex",   label)
     chain    = m.get("_chain", "")
     dex_chain = f"{dex} | {chain}" if chain else dex
-    sep      = "━" * 19
-    W        = 19
     pool_url = m.get("pool_url", "")
-    body_lines = [
-        f"{'Pool:':<{W}}{m.get('name', '')}",
-        f"{'Motivo:':<{W}}{reason}",
-        f"{'TVL:':<{W}}{fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})",
-        f"{'Vol 24h:':<{W}}{fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})",
-        sep,
-        f"{'Fees 24h:':<{W}}{fmt_money(m['fees_24h'])}",
-    ]
-    header = f"⚠️ POOL DECLIVE — {dex_chain}"
-    body   = "\n".join(body_lines)
-    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{pool_url}">{dex}</a>'
+    addr     = m.get("address", "")
+    sym_a    = m.get("sym_a", "?")
+    sym_b    = m.get("sym_b", "?")
+    return (
+        f"⚠️ POOL DECLIVE — {dex_chain}\n"
+        f"{sym_a} / {sym_b}\n"
+        f"\n"
+        f"📉 Motivo: {html.escape(reason)}\n"
+        f"💧 TVL: {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
+        f"📈 Vol 24h: {fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})\n"
+        f"💸 Fees 24h: {fmt_money(m['fees_24h'])}\n"
+        f"\n"
+        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{pool_url}">{dex}</a>\n'
+        f"━━━━━━━━━━━━━━━"
+    )
 
 
 def _process_new_source(
@@ -1069,55 +1089,60 @@ def _build_pancake_alert(m: dict) -> str:
     apr      = m.get("apr", 0)
     range_str, apr_rango_str, _ = _range_parts(m)
     fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
+    fees_7d  = fees_1k * 7
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi      = m.get("rsi")
     rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
-    rsi_emoji = "" if rsi is None else ("🟢" if rsi < 30 else ("🟡" if rsi < 50 else ("🟠" if rsi < 70 else "🔴")))
     lp       = _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
-    lp_emoji = "🟢" if lp >= 70 else ("🟡" if lp >= 50 else "🔴")
-    sep      = "━" * 19
-    W        = 19
     pool_url = f"https://pancakeswap.finance/info/v3/pairs/{m['address']}"
-    body_lines = [
-        f"{'Pool:':<{W}}{m.get('name', '')}",
-        f"{'TVL:':<{W}}{fmt_money(tvl)}",
-        f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
-        f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
-        sep,
-        f"{'Rango sugerido:':<{W}}{range_str}",
-        f"{'Fees/día ($1K):':<{W}}${fees_1k:.2f}",
-        f"{'APR Fees:':<{W}}{apr:,.0f}%",
-    ]
-    if apr_rango_str:
-        body_lines.append(f"{'APR Fees rango:':<{W}}{apr_rango_str}")
-    body_lines += [
-        sep,
-        f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
-        f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
-    ]
-    header = f"🚨 NUEVA OPORTUNIDAD — {dex} | {chain} {badge}"
-    body   = "\n".join(body_lines)
-    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{pool_url}">PancakeSwap V3</a>'
+    addr     = m.get("address", "")
+    sym_a    = m.get("sym_a", "?")
+    sym_b    = m.get("sym_b", "?")
+    fee_tier = m.get("fee_tier") or 0
+    fee_str  = f"  {fee_tier * 100:.4g}%" if fee_tier else ""
+    apr_rango_line = f"🚀 APR Rango: {apr_rango_str}\n" if apr_rango_str else ""
+    return (
+        f"🚨 NUEVA OPORTUNIDAD — {dex} | {chain} {badge}\n"
+        f"{sym_a} / {sym_b}{fee_str}\n"
+        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
+        f"🎯 Rango sugerido: {range_str}\n"
+        f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
+        f"\n"
+        f"💧 TVL: {fmt_money(tvl)}\n"
+        f"📈 Vol 24h: {fmt_money(vol_24h)}\n"
+        f"🔄 Vol/TVL: {vol_tvl:.2f}x{fire}\n"
+        f"⚡ APR Fees: {apr:,.0f}%\n"
+        f"{apr_rango_line}"
+        f"📉 RSI: {rsi_str}\n"
+        f"\n"
+        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{pool_url}">PancakeSwap V3</a>\n'
+        f"━━━━━━━━━━━━━━━"
+    )
 
 
 def _build_pancake_decline(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
     dex      = m.get("_dex",   "PancakeSwap V3")
     chain    = m.get("_chain", "BSC")
-    sep      = "━" * 19
-    W        = 19
     pool_url = f"https://pancakeswap.finance/info/v3/pairs/{m['address']}"
-    body_lines = [
-        f"{'Pool:':<{W}}{m.get('name', '')}",
-        f"{'Motivo:':<{W}}{reason}",
-        f"{'TVL:':<{W}}{fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})",
-        f"{'Vol 24h:':<{W}}{fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})",
-        sep,
-        f"{'Fees 24h:':<{W}}{fmt_money(m['fees_24h'])}",
-    ]
-    header = f"⚠️ POOL DECLIVE — {dex} | {chain}"
-    body   = "\n".join(body_lines)
-    return f'{header}\n<pre>{body}</pre>\n🔗 <a href="{pool_url}">PancakeSwap V3</a>'
+    addr     = m.get("address", "")
+    sym_a    = m.get("sym_a", "?")
+    sym_b    = m.get("sym_b", "?")
+    return (
+        f"⚠️ POOL DECLIVE — {dex} | {chain}\n"
+        f"{sym_a} / {sym_b}\n"
+        f"\n"
+        f"📉 Motivo: {html.escape(reason)}\n"
+        f"💧 TVL: {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
+        f"📈 Vol 24h: {fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})\n"
+        f"💸 Fees 24h: {fmt_money(m['fees_24h'])}\n"
+        f"\n"
+        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{pool_url}">PancakeSwap V3</a>\n'
+        f"━━━━━━━━━━━━━━━"
+    )
 
 
 def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifying: list, all_bluechip: list) -> int:

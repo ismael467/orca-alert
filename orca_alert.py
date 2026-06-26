@@ -691,7 +691,8 @@ def build_new_alert(m: dict) -> str:
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{purl}">Abrir en {pulab}</a>\n'
         f'🔗 <a href="{_dexscreener_url(addr)}">Ver en DexScreener</a>\n'
-        f"⏱ Detectado ahora"
+        f"⏱ Detectado ahora\n"
+        f"━━━━━━━━━━━━━━━"
     )
 
 
@@ -731,7 +732,8 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{purl}">Abrir en {pulab}</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr)}">Ver en DexScreener</a>'
+        f'🔗 <a href="{_dexscreener_url(addr)}">Ver en DexScreener</a>\n'
+        f"━━━━━━━━━━━━━━━"
     )
 
 
