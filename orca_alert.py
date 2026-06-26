@@ -312,13 +312,26 @@ def compute_metrics(pool: dict, top100_ids: set[str]) -> dict | None:
     }
 
 
+def _is_trap(m: dict) -> bool:
+    tvl = m.get("tvl", 0)
+    if tvl < 20_000:
+        return True
+    if tvl > 0 and m.get("vol_24h", 0) / tvl > 10:
+        return True
+    if m.get("apr", 0) > 5_000:
+        return True
+    return False
+
+
 def passes_filters(m: dict) -> bool:
+    if _is_trap(m):
+        return False
     if _lp_score(m["vol_24h"], m["tvl"], None,
                  _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")),
                  m.get("apr", 0.0)) < HARD_MIN_LP_SCORE:
         return False
     return (
-        m["apr"] >= MIN_APR_PCT
+        MIN_APR_PCT <= m["apr"] <= HARD_MAX_APR_RANGO
         and m["vol_24h"] >= MIN_VOL_24H
         and m["fees_24h"] >= MIN_FEES_24H
         and m["tvl"] >= HARD_MIN_TVL

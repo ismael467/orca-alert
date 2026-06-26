@@ -600,6 +600,8 @@ def _is_bluechip(m: dict) -> bool:
 
 
 def _passes_bluechip_filters(m: dict) -> bool:
+    if _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", "")) < 40:
+        return False
     return m.get("tvl", 0) >= BLUECHIP_MIN_TVL and m.get("apr", 0) >= BLUECHIP_MIN_APR
 
 
