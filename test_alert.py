@@ -15,6 +15,7 @@ POOL_NEW = {
     "address":  "GBEFCNQCAJmCkfkHqBP9N5N2T4vKJGSFJkWEnJNfax1M",
     "symbol_a": "SOL",
     "symbol_b": "USDC",
+    "fee_rate": 0.003,
     "tvl":      480_000,
     "vol_24h":  720_000,
     "fees_24h": 2_160,

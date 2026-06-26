@@ -669,9 +669,14 @@ def build_new_alert(m: dict) -> str:
     fire     = " 🔥" if vol_tvl > 1 else ""
     dex      = m.get("dex", "Orca")
     addr     = m.get("address", "")
+    sym_a    = m.get("symbol_a", "?")
+    sym_b    = m.get("symbol_b", "?")
+    fee_rate = m.get("fee_rate") or 0
+    fee_str  = f"  {fee_rate * 100:.4g}%" if fee_rate else ""
     purl, pulab = _pool_url(m)
     return (
         f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL\n"
+        f"{sym_a} / {sym_b}{fee_str}\n"
         f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
         f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
         f"🎯 Rango sugerido: N/D\n"
@@ -705,9 +710,14 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     dex      = m.get("dex", "Orca")
     addr     = m.get("address", "")
+    sym_a    = m.get("symbol_a", "?")
+    sym_b    = m.get("symbol_b", "?")
+    fee_rate = m.get("fee_rate") or 0
+    fee_str  = f"  {fee_rate * 100:.4g}%" if fee_rate else ""
     purl, pulab = _pool_url(m)
     return (
         f"⚠️ POOL DECLIVE — {dex} | SOL\n"
+        f"{sym_a} / {sym_b}{fee_str}\n"
         f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
         f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
