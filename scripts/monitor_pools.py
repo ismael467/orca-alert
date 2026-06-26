@@ -79,6 +79,11 @@ TOP20_TOKENS = {
 BLUECHIP_MIN_TVL = 100_000
 BLUECHIP_MIN_APR = 100.0
 
+BLACKLIST_SYMBOLS = {
+    "USELESS", "SHIT", "DOGE2", "PEPE2", "SCAM",
+    "FAKE", "SAFE", "MOON2", "INU2",
+}
+
 BLUE_CHIP_LP = {
     "BTC","ETH","WETH","WBTC","cbBTC","cbETH","SOL","BNB","USDC","USDT",
     "DAI","UNI","LINK","AAVE","MKR","CRV","LDO","ARB","OP","MATIC","AVAX",
@@ -602,6 +607,9 @@ def _is_bluechip(m: dict) -> bool:
 def _passes_bluechip_filters(m: dict) -> bool:
     if _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", "")) < 40:
         return False
+    for sym in (m.get("sym_a", "").upper(), m.get("sym_b", "").upper()):
+        if sym in BLACKLIST_SYMBOLS:
+            return False
     return m.get("tvl", 0) >= BLUECHIP_MIN_TVL and m.get("apr", 0) >= BLUECHIP_MIN_APR
 
 
@@ -793,6 +801,9 @@ def _is_trap(m: dict) -> bool:
 def passes_new_filters(m: dict) -> bool:
     if _is_trap(m):
         return False
+    for sym in (m.get("sym_a", "").upper(), m.get("sym_b", "").upper()):
+        if sym in BLACKLIST_SYMBOLS:
+            return False
     if m["tvl"] < NEW_MIN_TVL:
         return False
     if m["vol_24h"] < NEW_MIN_VOL:
@@ -814,6 +825,9 @@ def passes_projectx_filters(m: dict) -> bool:
     """Relaxed filters for ProjectX/KittenSwap HyperEVM: mature stable pools, no spike pattern."""
     if _is_trap(m):
         return False
+    for sym in (m.get("sym_a", "").upper(), m.get("sym_b", "").upper()):
+        if sym in BLACKLIST_SYMBOLS:
+            return False
     if m["tvl"] < PROJECTX_MIN_TVL:
         return False
     if m["vol_24h"] < PROJECTX_MIN_VOL:
@@ -1850,6 +1864,8 @@ def main() -> None:
             continue
         lp_score = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
         if lp_score < 40:
+            continue
+        if m.get("rsi") is None:
             continue
         if send_telegram(_build_bluechip_alert(m)):
             total += 1
