@@ -6,6 +6,7 @@ CoinGecko:  top-30 coins by market cap fetched live each run
 State:      state.json committed to repo with [skip ci]
 """
 
+import html
 import json
 import os
 import time
@@ -195,7 +196,27 @@ def _lp_score(
 def _fmt_apr_rango(val: float | None) -> str:
     if val is None:
         return "N/D"
-    return ">10,000%" if val > 10_000 else f"{val:,.0f}%"
+    return "&gt;10,000%" if val > 10_000 else f"{val:,.0f}%"
+
+
+def _lp_label(score: int) -> str:
+    if score >= 80:
+        return "Excelente"
+    if score >= 60:
+        return "Bueno"
+    if score >= 40:
+        return "Regular"
+    return "Bajo"
+
+
+def _pool_url(m: dict) -> tuple[str, str]:
+    dex  = m.get("dex", "Orca")
+    addr = m.get("address", "")
+    if "Meteora" in dex:
+        return f"https://app.meteora.ag/dlmm/{addr}", "Meteora DLMM"
+    if "Raydium" in dex:
+        return f"https://raydium.io/clmm/pool/?poolId={addr}", "Raydium CLMM"
+    return f"https://www.orca.so/pools/{addr}", "Orca"
 
 
 def _hard_block(m: dict) -> tuple[bool, str]:
@@ -633,68 +654,75 @@ def _merkl_lines(merkl: dict | None, apr: float, W: int) -> list[str]:
 
 
 def build_new_alert(m: dict) -> str:
-    rsi       = m.get("rsi")
-    rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
-    rsi_emoji = "" if rsi is None else ("🟢" if rsi < 30 else ("🟡" if rsi < 50 else ("🟠" if rsi < 70 else "🔴")))
-    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")), m.get("apr", 0.0))
-    lp_emoji  = "🏆" if lp >= 80 else ("🟢" if lp >= 60 else ("🟡" if lp >= 40 else "🔴"))
-    tvl       = m["tvl"]
-    vol_24h   = m["vol_24h"]
-    fees_24h  = m["fees_24h"]
-    apr       = m["apr"]
-    vol_tvl   = vol_24h / tvl if tvl > 0 else 0
-    fire      = " 🔥" if vol_tvl > 1 else ""
-    fees_1k   = (1_000 / tvl) * fees_24h if tvl > 0 else 0
-    fees_rango_1k = 1_000 * apr / 100 / 365
-    badge     = "🟢" if m.get("in_top100") else "🟡"
-    sep       = "━" * 19
-    W         = 19
-    addr      = m.get("address", "")
-    body_lines = [
-        f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
-        f"{'TVL:':<{W}}{fmt_money(tvl)}",
-        f"{'Vol 24h:':<{W}}{fmt_money(vol_24h)}",
-        f"{'Vol/TVL:':<{W}}{vol_tvl:.2f}x{fire}",
-        sep,
-        f"{'APR Fees:':<{W}}{apr:,.0f}%",
-        sep,
-        f"{'RSI:':<{W}}{rsi_str}{' ' + rsi_emoji if rsi_emoji else ''}",
-        f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
-    ]
-    body_lines += _merkl_lines(m.get("merkl"), apr, W)
-    dex       = m.get("dex", "Orca")
-    header    = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
-    fees_bold = f"<b>Fees/día rango ($1K): ${fees_rango_1k:.2f}</b>"
-    addr_line = f"Contrato: {_fmt_addr(addr)}"
-    body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n{addr_line}\n<pre>{body}</pre>\n🔗 <a href="{_dexscreener_url(addr)}">{dex}</a>'
+    rsi      = m.get("rsi")
+    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
+    lp       = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi,
+                         _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")),
+                         m.get("apr", 0.0))
+    tvl      = m.get("tvl", 0)
+    vol_24h  = m.get("vol_24h", 0)
+    fees_24h = m.get("fees_24h", 0)
+    apr      = m.get("apr", 0)
+    fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
+    fees_7d  = fees_1k * 7
+    vol_tvl  = vol_24h / tvl if tvl > 0 else 0
+    fire     = " 🔥" if vol_tvl > 1 else ""
+    dex      = m.get("dex", "Orca")
+    addr     = m.get("address", "")
+    purl, pulab = _pool_url(m)
+    return (
+        f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL\n"
+        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
+        f"🎯 Rango sugerido: N/D\n"
+        f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
+        f"\n"
+        f"💧 TVL: {fmt_money(tvl)}\n"
+        f"📈 Vol 24h: {fmt_money(vol_24h)}\n"
+        f"🔄 Vol/TVL: {vol_tvl:.2f}x{fire}\n"
+        f"⚡ APR Fees: {apr:,.0f}%\n"
+        f"📉 RSI: {rsi_str}\n"
+        f"\n"
+        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{purl}">Abrir en {pulab}</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr)}">Ver en DexScreener</a>\n'
+        f"⏱ Detectado ahora"
+    )
 
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
-    rsi       = m.get("rsi")
-    rsi_str   = f"{rsi:.0f}" if rsi is not None else "N/D"
-    lp        = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi, _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")), m.get("apr", 0.0))
-    lp_emoji  = "🏆" if lp >= 80 else ("🟢" if lp >= 60 else ("🟡" if lp >= 40 else "🔴"))
-    fees_1k   = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
-    fees_rango_1k = 1_000 * m.get("apr", 0) / 100 / 365
-    sep       = "━" * 19
-    W         = 19
-    addr      = m.get("address", "")
-    body_lines = [
-        f"{'Pool:':<{W}}{m['symbol_a']} / {m['symbol_b']}",
-        f"{'Motivo:':<{W}}{reason}",
-        f"{'TVL:':<{W}}{fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})",
-        f"{'Vol 24h:':<{W}}{fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})",
-        sep,
-        f"{'RSI:':<{W}}{rsi_str}",
-        f"{'LP Score:':<{W}}{lp}/100 {lp_emoji}",
-    ]
-    dex       = m.get("dex", "Orca")
-    header    = f"⚠️ POOL DECLIVE — {dex} | SOL"
-    fees_bold = f"<b>Fees/día rango ($1K): ${fees_rango_1k:.2f}</b>"
-    addr_line = f"Contrato: {_fmt_addr(addr)}"
-    body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n{addr_line}\n<pre>{body}</pre>\n🔗 <a href="{_dexscreener_url(addr)}">{dex}</a>'
+    rsi      = m.get("rsi")
+    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
+    lp       = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi,
+                         _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")),
+                         m.get("apr", 0.0))
+    tvl      = m.get("tvl", 0)
+    vol_24h  = m.get("vol_24h", 0)
+    fees_24h = m.get("fees_24h", 0)
+    apr      = m.get("apr", 0)
+    fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
+    fees_7d  = fees_1k * 7
+    vol_tvl  = vol_24h / tvl if tvl > 0 else 0
+    dex      = m.get("dex", "Orca")
+    addr     = m.get("address", "")
+    purl, pulab = _pool_url(m)
+    return (
+        f"⚠️ POOL DECLIVE — {dex} | SOL\n"
+        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
+        f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
+        f"\n"
+        f"💧 TVL: {fmt_money(tvl)} (ant: {fmt_money(prev_tvl)})\n"
+        f"📈 Vol 24h: {fmt_money(vol_24h)} (ant: {fmt_money(prev_vol)})\n"
+        f"🔄 Vol/TVL: {vol_tvl:.2f}x\n"
+        f"⚡ APR Fees: {apr:,.0f}%\n"
+        f"📉 RSI: {rsi_str}\n"
+        f"⚠️ Motivo: {html.escape(reason)}\n"
+        f"\n"
+        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{purl}">Abrir en {pulab}</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr)}">Ver en DexScreener</a>'
+    )
 
 
 def main() -> None:
