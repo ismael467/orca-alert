@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write             # needed to commit state_monitor.json
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   monitor:
     runs-on: ubuntu-latest
