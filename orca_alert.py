@@ -36,7 +36,7 @@ ALERT_COOLDOWN_H    = 4    # minimum hours between any alerts for the same pool
 # ── Hard-block filter constants ──────────────────────────────────────────────
 HARD_MIN_LP_SCORE  = 40
 HARD_MIN_TVL       = 50_000
-HARD_MAX_APR_RANGO = 3_000
+HARD_MAX_APR_RANGO = 1_500
 
 BLACKLIST_SYMBOLS = {
     "USELESS", "SHIT", "DOGE2", "PEPE2", "SCAM",
