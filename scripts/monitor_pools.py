@@ -315,7 +315,7 @@ def _range_line(
         ancho = (high - low) / price_base
         if ancho > 0:
             apr_rango = apr / ancho
-            apr_rango = min(apr_rango, apr * 5)
+            apr_rango = min(apr_rango, apr * 3)
             if apr_rango > 10_000:
                 apr_line = "\n⚠️ APR en rango: >10,000%"
             else:
@@ -373,7 +373,7 @@ def _range_parts(m: dict) -> tuple[str, str, str]:
         ancho = (high - low) / price_base
         if ancho > 0:
             apr_rango = apr / ancho
-            apr_rango = min(apr_rango, apr * 5)
+            apr_rango = min(apr_rango, apr * 3)
             apr_rango_str = ">10,000%" if apr_rango > 10_000 else f"{apr_rango:,.0f}%"
 
     return range_str, apr_rango_str, dur_str
@@ -665,7 +665,7 @@ def _update_pool_cache(pool_cache: dict, qualifying: list[dict], now_iso: str) -
             price = m.get("price_base")
             if price and price > 0:
                 ancho = (high - low) / price
-                apr_rango = min(apr / ancho, apr * 5) if ancho > 0 else None
+                apr_rango = min(apr / ancho, apr * 3) if ancho > 0 else None
             else:
                 apr_rango = None
         else:
