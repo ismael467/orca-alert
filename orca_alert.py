@@ -634,7 +634,6 @@ def build_new_alert(m: dict) -> str:
     fees_1k   = (1_000 / tvl) * fees_24h if tvl > 0 else 0
     fees_rango_1k = 1_000 * apr / 100 / 365
     badge     = "🟢" if m.get("in_top100") else "🟡"
-    purl      = f"https://birdeye.so/pool/{m['address']}?chain=solana"
     sep       = "━" * 19
     W         = 19
     addr      = m.get("address", "")
@@ -654,9 +653,8 @@ def build_new_alert(m: dict) -> str:
     header    = f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL {badge}"
     fees_bold = f"<b>Fees/día rango ($1K): ${fees_rango_1k:.2f}</b>"
     addr_line = f"Contrato: {_fmt_addr(addr)}"
-    dex_line  = f'🔍 <a href="{_dexscreener_url(addr)}">DexScreener</a>'
     body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n{addr_line}\n{dex_line}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    return f'{header}\n{fees_bold}\n{addr_line}\n<pre>{body}</pre>\n🔗 <a href="{_dexscreener_url(addr)}">{dex}</a>'
 
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
@@ -666,7 +664,6 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     lp_emoji  = "🏆" if lp >= 80 else ("🟢" if lp >= 60 else ("🟡" if lp >= 40 else "🔴"))
     fees_1k   = (1_000 / m["tvl"]) * m["fees_24h"] if m["tvl"] > 0 else 0
     fees_rango_1k = 1_000 * m.get("apr", 0) / 100 / 365
-    purl      = f"https://birdeye.so/pool/{m['address']}?chain=solana"
     sep       = "━" * 19
     W         = 19
     addr      = m.get("address", "")
@@ -683,9 +680,8 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     header    = f"⚠️ POOL DECLIVE — {dex} | SOL"
     fees_bold = f"<b>Fees/día rango ($1K): ${fees_rango_1k:.2f}</b>"
     addr_line = f"Contrato: {_fmt_addr(addr)}"
-    dex_line  = f'🔍 <a href="{_dexscreener_url(addr)}">DexScreener</a>'
     body      = "\n".join(body_lines)
-    return f'{header}\n{fees_bold}\n{addr_line}\n{dex_line}\n<pre>{body}</pre>\n🔗 <a href="{purl}">Birdeye</a>'
+    return f'{header}\n{fees_bold}\n{addr_line}\n<pre>{body}</pre>\n🔗 <a href="{_dexscreener_url(addr)}">{dex}</a>'
 
 
 def main() -> None:
