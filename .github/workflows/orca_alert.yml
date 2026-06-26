@@ -6,8 +6,8 @@ on:
   workflow_dispatch:          # allow manual run from GitHub UI
 
 concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: write             # needed to commit state.json
