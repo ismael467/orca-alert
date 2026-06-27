@@ -525,6 +525,21 @@ def _fmt_addr(addr: str) -> str:
     return f"{addr[:6]}…{addr[-4:]}"
 
 
+_DEXSCREENER_CHAIN = {
+    "bsc":      "bsc",
+    "solana":   "solana",
+    "ethereum": "ethereum",
+    "arbitrum": "arbitrum",
+    "base":     "base",
+    "hyperevm": "hyperevm",
+}
+
+
+def _dexscreener_url(address: str, chain: str) -> str:
+    slug = _DEXSCREENER_CHAIN.get(chain.lower(), chain.lower())
+    return f"https://dexscreener.com/{slug}/{address}"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # TOP 5 summary helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -645,6 +660,7 @@ def _build_bluechip_alert(m: dict) -> str:
     addr     = m.get("address", "")
     sym_a    = m.get("sym_a", "?")
     sym_b    = m.get("sym_b", "?")
+    chain    = m.get("_chain", "")
     return (
         f"🔵 OPORTUNIDAD ESTABLE — {source}\n"
         f"{sym_a} / {sym_b}\n"
@@ -661,6 +677,7 @@ def _build_bluechip_alert(m: dict) -> str:
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">{source}</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -892,6 +909,7 @@ def _build_new_alert(m: dict, label: str) -> str:
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">{dex}</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -917,6 +935,7 @@ def _build_new_decline(
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">{dex}</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -1119,6 +1138,7 @@ def _build_pancake_alert(m: dict) -> str:
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">PancakeSwap V3</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -1141,6 +1161,7 @@ def _build_pancake_decline(m: dict, reason: str, prev_tvl: float, prev_vol: floa
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">PancakeSwap V3</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -1159,6 +1180,7 @@ def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifyin
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "PancakeSwap BSC"
+            m["_chain"] = "BSC"
             all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["is_btcb"]), -x["apr"]))
@@ -1302,6 +1324,7 @@ def run_orca(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_cache
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "Orca Solana"
+            m["_chain"] = "Solana"
             all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
@@ -1482,6 +1505,7 @@ def run_uniswap(
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = label
+            m["_chain"] = chain_display
             all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
@@ -1606,6 +1630,7 @@ def run_projectx(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_c
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "ProjectX HyperEVM"
+            m["_chain"] = "HyperEVM"
             all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
@@ -1702,6 +1727,7 @@ def run_kittenswap(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "KittenSwap HyperEVM"
+            m["_chain"] = "HyperEVM"
             all_bluechip.append(m)
 
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
@@ -1812,6 +1838,7 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
             qualifying.append(m)
         elif m and _is_bluechip(m) and _passes_bluechip_filters(m):
             m["_source"] = "Raydium Solana"
+            m["_chain"] = "Solana"
             all_bluechip.append(m)
     qualifying.sort(key=lambda x: (-int(x["in_top100"]), -x["apr"]))
     print(f"[{label}] {len(qualifying)} pools pass filters")
