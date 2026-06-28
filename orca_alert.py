@@ -36,8 +36,9 @@ ALERT_COOLDOWN_H    = 4    # minimum hours between any alerts for the same pool
 
 # ── Hard-block filter constants ──────────────────────────────────────────────
 HARD_MIN_LP_SCORE  = 40
-HARD_MIN_TVL       = 50_000
+HARD_MIN_TVL       = 50_000   # safety floor in _hard_block() — applies to all sources
 HARD_MAX_APR_RANGO = 1_500
+ORCA_MIN_TVL       = 100_000  # fetch-level TVL floor for Orca Whirlpools
 
 BLACKLIST_SYMBOLS = {
     "USELESS", "SHIT", "DOGE2", "PEPE2", "SCAM",
@@ -58,8 +59,8 @@ BLUE_CHIP_TOKENS = {
 # ── Meteora DLMM ─────────────────────────────────────────────────────────────
 METEORA_DLMM_API = "https://dlmm-api.meteora.ag"   # official (use when available)
 METEORA_GT_URL   = "https://api.geckoterminal.com/api/v2/networks/solana/dexes/meteora/pools"
-METEORA_MIN_TVL  = 200_000
-METEORA_MIN_VOL  = 100_000
+METEORA_MIN_TVL  = 100_000
+METEORA_MIN_VOL  =  50_000
 METEORA_FEE_EST  = 0.0010  # 0.10% default fee estimate when official API is unavailable
 
 # ── Raydium CLMM ──────────────────────────────────────────────────────────────
@@ -68,8 +69,8 @@ RAYDIUM_CLMM_URL = "https://api-v3.raydium.io/pools/info/list"
 # ── Merkl reward campaigns ─────────────────────────────────────────────────────
 MERKL_BASE   = "https://api.merkl.xyz/v4/opportunities"
 _MERKL_CHAIN = {"Solana": 101}
-RAYDIUM_MIN_TVL  = 200_000
-RAYDIUM_MIN_VOL  = 100_000
+RAYDIUM_MIN_TVL  = 100_000
+RAYDIUM_MIN_VOL  =  50_000
 
 
 def _calc_rsi(closes: list[float], period: int = 14) -> float | None:
@@ -361,7 +362,7 @@ def passes_filters(m: dict) -> bool:
         MIN_APR_PCT <= m["apr"] <= HARD_MAX_APR_RANGO
         and m["vol_24h"] >= MIN_VOL_24H
         and m["fees_24h"] >= MIN_FEES_24H
-        and m["tvl"] >= HARD_MIN_TVL
+        and m["tvl"] >= ORCA_MIN_TVL
         and m["tvl"] <= MAX_TVL
     )
 

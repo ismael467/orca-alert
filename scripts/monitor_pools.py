@@ -57,8 +57,8 @@ WBNB_ADDR = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"
 # New-source filter constants (Orca + Uniswap)
 # ─────────────────────────────────────────────────────────────────────────────
 
-NEW_MIN_TVL    = 200_000
-NEW_MIN_VOL    = 100_000
+NEW_MIN_TVL    = 100_000
+NEW_MIN_VOL    =  50_000
 NEW_MIN_APR    = 200.0
 NEW_MAX_APR    = 3_000.0
 NEW_PRICE_MIN  = -10.0   # %
@@ -66,8 +66,8 @@ NEW_PRICE_MAX  =  20.0   # %
 NEW_SPIKE_MIN  =   2.0   # × 6-day average
 
 # ProjectX-specific filters — relaxed: mature stable pools, no spike pattern
-PROJECTX_MIN_TVL = 100_000
-PROJECTX_MIN_VOL =  50_000
+PROJECTX_MIN_TVL =  50_000
+PROJECTX_MIN_VOL =  25_000
 PROJECTX_MIN_APR =   100.0
 PROJECTX_MAX_APR = 5_000.0
 TOP_N_COINS    = 100
