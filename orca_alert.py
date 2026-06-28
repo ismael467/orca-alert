@@ -43,11 +43,12 @@ ORCA_MIN_TVL       = 100_000  # fetch-level TVL floor for Orca Whirlpools
 BLACKLIST_SYMBOLS = {
     "USELESS", "SHIT", "DOGE2", "PEPE2", "SCAM",
     "FAKE", "SAFE", "MOON2", "INU2",
+    "GLONK",
 }
 
 _STABLE_SYMS = {"usdc", "usdt", "dai", "busd", "tusd", "frax", "usdh", "eurc"}
 # Wrapped tokens whose Binance/CoinGecko ticker is the unwrapped name
-_SYM_ALIAS = {"WSOL": "SOL", "WBTC": "BTC", "WETH": "ETH", "WBNB": "BNB", "WMATIC": "MATIC"}
+_SYM_ALIAS = {"WSOL": "SOL", "WBTC": "BTC", "WETH": "ETH", "WBNB": "BNB", "WMATIC": "MATIC", "cbBTC": "BTC"}
 
 BLUE_CHIP_TOKENS = {
     "BTC", "WBTC", "ETH", "WETH", "SOL", "WSOL", "BNB", "WBNB", "XRP", "ADA",
@@ -582,6 +583,8 @@ def fetch_raydium_clmm(top100_ids: set[str]) -> list[dict]:
                 sym_a    = ((p.get("mintA") or {}).get("symbol") or "?").strip()
                 sym_b    = ((p.get("mintB") or {}).get("symbol") or "?").strip()
                 in_top100 = (str(sym_a).upper() in BLUE_CHIP_TOKENS) or (str(sym_b).upper() in BLUE_CHIP_TOKENS)
+                if fee_rate <= 0.0001 and not in_top100:
+                    continue  # 0.01% pools with no blue-chip token are routing noise, not LP opportunities
                 fee_str  = f"{fee_rate * 100:.2f}%"
                 result.append({
                     "address":   pid,
