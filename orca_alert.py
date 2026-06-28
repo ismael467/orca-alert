@@ -45,6 +45,8 @@ BLACKLIST_SYMBOLS = {
 }
 
 _STABLE_SYMS = {"usdc", "usdt", "dai", "busd", "tusd", "frax", "usdh", "eurc"}
+# Wrapped tokens whose Binance/CoinGecko ticker is the unwrapped name
+_SYM_ALIAS = {"WSOL": "SOL", "WBTC": "BTC", "WETH": "ETH", "WBNB": "BNB", "WMATIC": "MATIC"}
 
 BLUE_CHIP_TOKENS = {
     "BTC", "WBTC", "ETH", "WETH", "SOL", "WSOL", "BNB", "WBNB", "XRP", "ADA",
@@ -160,12 +162,16 @@ def _lp_score(
     elif ratio >= 1.0: score += 17.0
     elif ratio >= 0.5: score += 10.0
 
-    # APR Fees real — 25 pts (calibrado para el rango Orca: MIN_APR=500%)
+    # APR Fees real — 25 pts
+    # High tiers (>=500%) reflect Orca Whirlpool range; lower tiers value blue-chip CLMM pools
     if   apr >= 3000: score += 25.0
     elif apr >= 2000: score += 22.0
     elif apr >= 1000: score += 18.0
     elif apr >=  700: score += 15.0
     elif apr >=  500: score += 12.0
+    elif apr >=  100: score +=  8.0
+    elif apr >=   50: score +=  5.0
+    elif apr >=   10: score +=  2.0
 
     # TVL absoluto — 15 pts
     if   tvl >= 2_000_000: score += 15.0
@@ -844,12 +850,13 @@ def main() -> None:
         sym_a = m.get("symbol_a", "")
         sym_b = m.get("symbol_b", "")
         if sym_a.lower() not in _STABLE_SYMS:
-            cg_id, sym = None, sym_a
+            raw_sym = sym_a
         elif sym_b.lower() not in _STABLE_SYMS:
-            cg_id, sym = None, sym_b
+            raw_sym = sym_b
         else:
-            cg_id, sym = None, ""
-        m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
+            raw_sym = ""
+        sym = _SYM_ALIAS.get(raw_sym.upper(), raw_sym)
+        m["rsi"] = _fetch_rsi(None, sym, rsi_cache)
         m["merkl"] = _get_merkl(m["address"], "Solana", merkl_cache)
 
     for m in meteora_pools:
@@ -913,12 +920,13 @@ def main() -> None:
         sym_a = m.get("symbol_a", "")
         sym_b = m.get("symbol_b", "")
         if sym_a.lower() not in _STABLE_SYMS:
-            cg_id, sym = None, sym_a
+            raw_sym = sym_a
         elif sym_b.lower() not in _STABLE_SYMS:
-            cg_id, sym = None, sym_b
+            raw_sym = sym_b
         else:
-            cg_id, sym = None, ""
-        m["rsi"] = _fetch_rsi(cg_id, sym, rsi_cache)
+            raw_sym = ""
+        sym = _SYM_ALIAS.get(raw_sym.upper(), raw_sym)
+        m["rsi"] = _fetch_rsi(None, sym, rsi_cache)
         m["merkl"] = _get_merkl(m["address"], "Solana", merkl_cache)
 
     for m in raydium_pools:
