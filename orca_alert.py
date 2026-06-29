@@ -25,10 +25,10 @@ COINGECKO_TOP100_URL = (
     "?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false"
 )
 
-MIN_APR_PCT = 500
+MIN_APR_PCT          = 500
+MIN_APR_PCT_BLUECHIP =  50   # both-side blue-chip pairs (e.g. cbBTC/SOL)
 MIN_VOL_24H = 50_000
 MIN_FEES_24H = 500
-MAX_TVL = 5_000_000
 DECLINE_TVL_PCT     = 50
 DECLINE_VOL_PCT     = 60
 DECLINE_VOL_TVL_PCT = 40   # alert if Vol/TVL ratio drops >40% vs previous run
@@ -234,10 +234,7 @@ def _hard_block(m: dict) -> tuple[bool, str]:
     print(f"[hard_block] {m.get('name', '')} — LP Score: {lp}/100, TVL: ${m.get('tvl', 0):,.0f}")
     if lp < HARD_MIN_LP_SCORE:
         return True, f"LP Score {lp} < {HARD_MIN_LP_SCORE}"
-    # 2. RSI N/D
-    if m.get("rsi") is None:
-        return True, "RSI N/D (token no encontrado en CoinGecko/Binance)"
-    # 3. TVL < $50,000
+    # 2. TVL < $50,000
     if m.get("tvl", 0) < HARD_MIN_TVL:
         return True, f"TVL ${m['tvl']:,.0f} < ${HARD_MIN_TVL:,}"
     # 4. APR > 3,000% (no range calc for Orca; base APR used as proxy)
@@ -355,16 +352,15 @@ def _is_trap(m: dict) -> bool:
 def passes_filters(m: dict) -> bool:
     if _is_trap(m):
         return False
-    if _lp_score(m["vol_24h"], m["tvl"], None,
-                 _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")),
-                 m.get("apr", 0.0)) < HARD_MIN_LP_SCORE:
+    bc = _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", ""))
+    if _lp_score(m["vol_24h"], m["tvl"], None, bc, m.get("apr", 0.0)) < HARD_MIN_LP_SCORE:
         return False
+    min_apr = MIN_APR_PCT_BLUECHIP if bc >= 2 else MIN_APR_PCT
     return (
-        MIN_APR_PCT <= m["apr"] <= HARD_MAX_APR_RANGO
+        min_apr <= m["apr"] <= HARD_MAX_APR_RANGO
         and m["vol_24h"] >= MIN_VOL_24H
         and m["fees_24h"] >= MIN_FEES_24H
         and m["tvl"] >= ORCA_MIN_TVL
-        and m["tvl"] <= MAX_TVL
     )
 
 
@@ -665,7 +661,7 @@ def _merkl_lines(merkl: dict | None, apr: float, W: int) -> list[str]:
 
 def build_new_alert(m: dict) -> str:
     rsi      = m.get("rsi")
-    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
+    rsi_line = f"📉 RSI: {rsi:.0f}\n" if rsi is not None else ""
     lp       = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi,
                          _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")),
                          m.get("apr", 0.0))
@@ -696,7 +692,7 @@ def build_new_alert(m: dict) -> str:
         f"📈 Vol 24h: {fmt_money(vol_24h)}\n"
         f"🔄 Vol/TVL: {vol_tvl:.2f}x{fire}\n"
         f"⚡ APR Fees: {apr:,.0f}%\n"
-        f"📉 RSI: {rsi_str}\n"
+        f"{rsi_line}"
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{purl}">Abrir en {pulab}</a>\n'
@@ -708,7 +704,7 @@ def build_new_alert(m: dict) -> str:
 
 def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) -> str:
     rsi      = m.get("rsi")
-    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
+    rsi_line = f"📉 RSI: {rsi:.0f}\n" if rsi is not None else ""
     lp       = _lp_score(m.get("vol_24h", 0), m.get("tvl", 0), rsi,
                          _blue_chip_count(m.get("symbol_a", ""), m.get("symbol_b", "")),
                          m.get("apr", 0.0))
@@ -737,7 +733,7 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
         f"📈 Vol 24h: {fmt_money(vol_24h)} (ant: {fmt_money(prev_vol)})\n"
         f"🔄 Vol/TVL: {vol_tvl:.2f}x\n"
         f"⚡ APR Fees: {apr:,.0f}%\n"
-        f"📉 RSI: {rsi_str}\n"
+        f"{rsi_line}"
         f"⚠️ Motivo: {html.escape(reason)}\n"
         f"\n"
         f"📋 Contrato: {_fmt_addr(addr)}\n"
