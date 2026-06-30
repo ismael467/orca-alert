@@ -54,7 +54,7 @@ BLUE_CHIP_TOKENS = {
     "BTC", "WBTC", "ETH", "WETH", "SOL", "WSOL", "BNB", "WBNB", "XRP", "ADA",
     "AVAX", "DOT", "MATIC", "WMATIC", "LINK", "UNI", "LTC", "BCH", "USDC", "USDT",
     "HYPE", "WHYPE", "ARB", "OP", "UBTC", "UETH", "USOL", "USDH", "TON", "NEAR", "APT",
-    "cbBTC", "cbETH",
+    "CBBTC", "CBETH", "WHETH",
 }
 
 # ── Meteora DLMM ─────────────────────────────────────────────────────────────
