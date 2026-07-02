@@ -796,14 +796,14 @@ def main() -> None:
                 print(f"[SKIP] {m['name']} — {_reason}")
             elif send_telegram(build_new_alert(m)):
                 alerts_sent += 1
-            alerted[pid] = {
-                "first_seen": now_iso,
-                "last_alert": now_iso,
-                "last_tvl": m["tvl"],
-                "last_vol_24h": m["vol_24h"],
-                "alerted_decline": False,
-                "name": m["name"],
-            }
+                alerted[pid] = {
+                    "first_seen": now_iso,
+                    "last_alert": now_iso,
+                    "last_tvl": m["tvl"],
+                    "last_vol_24h": m["vol_24h"],
+                    "alerted_decline": False,
+                    "name": m["name"],
+                }
         else:
             prev = alerted[pid]
             prev_tvl = prev.get("last_tvl", m["tvl"])
@@ -867,14 +867,14 @@ def main() -> None:
                 print(f"[METEORA-SKIP] {m['name']} — {_reason}")
             elif send_telegram(build_new_alert(m)):
                 alerts_sent += 1
-            meteora_alerted[pid] = {
-                "first_seen":      now_iso,
-                "last_alert":      now_iso,
-                "last_tvl":        m["tvl"],
-                "last_vol_24h":    m["vol_24h"],
-                "alerted_decline": False,
-                "name":            m["name"],
-            }
+                meteora_alerted[pid] = {
+                    "first_seen":      now_iso,
+                    "last_alert":      now_iso,
+                    "last_tvl":        m["tvl"],
+                    "last_vol_24h":    m["vol_24h"],
+                    "alerted_decline": False,
+                    "name":            m["name"],
+                }
         else:
             prev     = meteora_alerted[pid]
             prev_tvl = prev.get("last_tvl", m["tvl"])
@@ -937,14 +937,14 @@ def main() -> None:
                 print(f"[RAYDIUM-SKIP] {m['name']} — {_reason}")
             elif send_telegram(build_new_alert(m)):
                 alerts_sent += 1
-            raydium_alerted[pid] = {
-                "first_seen":      now_iso,
-                "last_alert":      now_iso,
-                "last_tvl":        m["tvl"],
-                "last_vol_24h":    m["vol_24h"],
-                "alerted_decline": False,
-                "name":            m["name"],
-            }
+                raydium_alerted[pid] = {
+                    "first_seen":      now_iso,
+                    "last_alert":      now_iso,
+                    "last_tvl":        m["tvl"],
+                    "last_vol_24h":    m["vol_24h"],
+                    "alerted_decline": False,
+                    "name":            m["name"],
+                }
         else:
             prev     = raydium_alerted[pid]
             prev_tvl = prev.get("last_tvl", m["tvl"])
