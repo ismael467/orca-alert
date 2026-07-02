@@ -338,7 +338,7 @@ def _range_parts(m: dict) -> tuple[str, str, str]:
     avg_spike_dur = rng_hist["avg_spike_dur"] if rng_hist else None
     if avg_spike_dur is None and m.get("day_volumes"):
         avg_spike_dur = _avg_spike_days(m["day_volumes"])
-    dur_str = f"{avg_spike_dur:.1f} días" if avg_spike_dur is not None else "N/D"
+    dur_str = f"{avg_spike_dur:.1f} days" if avg_spike_dur is not None else "N/A"
 
     low: float | None  = None
     high: float | None = None
@@ -351,7 +351,7 @@ def _range_parts(m: dict) -> tuple[str, str, str]:
             high *= 1.05
         elif price_chg is not None and price_chg < -5.0:
             low  *= 0.95
-        range_str = f"{_fmt_price(low)} – {_fmt_price(high)} (histórico)"
+        range_str = f"{_fmt_price(low)} – {_fmt_price(high)} (historical)"
     else:
         base_pct       = _range_fallback_pct(sym_a, sym_b)
         low_pct = high_pct = base_pct
@@ -513,15 +513,15 @@ def _lp_score_line(vol_24h: float, tvl: float, volume_spike: float | None, sym_a
 
 
 def _lp_label(score: int) -> str:
-    if score >= 80: return "Excelente"
-    if score >= 60: return "Bueno"
-    if score >= 40: return "Regular"
-    return "Bajo"
+    if score >= 80: return "Excellent"
+    if score >= 60: return "Good"
+    if score >= 40: return "Average"
+    return "Low"
 
 
 def _fmt_addr(addr: str) -> str:
     if not addr or len(addr) < 10:
-        return addr or "N/D"
+        return addr or "N/A"
     return f"{addr[:6]}…{addr[-4:]}"
 
 
@@ -563,12 +563,12 @@ def _build_top5_summary(pool_cache: dict, now_utc: datetime) -> str:
         s = p.get("lp_score", 0)
         score_emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
         rsi_val = p.get("rsi")
-        rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
+        rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/A"
         lines.append(
             f"{medals[i]} {p['name']} — {score_emoji} {s}/100\n"
-            f"   APR: {p['apr']:,.0f}% | Fees/día ($1K): ${p.get('fees_day_1k', 0):.2f} | RSI: {rsi_str}"
+            f"   APR: {p['apr']:,.0f}% | Fees/day ($1K): ${p.get('fees_day_1k', 0):.2f} | RSI: {rsi_str}"
         )
-    body = "\n".join(lines) if lines else "Sin pools detectadas aún."
+    body = "\n".join(lines) if lines else "No pools detected yet."
     date_str = f"{now_utc.day} {now_utc.strftime('%b')}"
     time_str = now_utc.strftime("%H:%M")
     return (
@@ -598,24 +598,24 @@ def _build_top3_daily(pool_cache: dict, now_utc: datetime) -> str:
         s = p.get("lp_score", 0)
         score_emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
         rsi_val = p.get("rsi")
-        rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
+        rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/A"
         apr_rango = p.get("apr_rango")
-        apr_rango_str = f"{apr_rango:,.0f}%" if apr_rango is not None else "N/D"
+        apr_rango_str = f"{apr_rango:,.0f}%" if apr_rango is not None else "N/A"
         vol_tvl = p.get("vol_tvl")
-        vol_tvl_str = f"{vol_tvl:.2f}x" if vol_tvl is not None else "N/D"
+        vol_tvl_str = f"{vol_tvl:.2f}x" if vol_tvl is not None else "N/A"
         dex = p.get("dex", "")
         chain = p.get("chain", "")
         dex_chain = f" — {dex} | {chain}" if dex and chain else ""
         lines.append(
             f"{medals[i]} {p['name']}{dex_chain}\n"
-            f"   APR: {p['apr']:,.0f}% | APR rango: {apr_rango_str}\n"
-            f"   Fees/día ($1K): ${p.get('fees_day_1k', 0):.2f} | Vol/TVL: {vol_tvl_str}\n"
+            f"   APR: {p['apr']:,.0f}% | APR range: {apr_rango_str}\n"
+            f"   Fees/day ($1K): ${p.get('fees_day_1k', 0):.2f} | Vol/TVL: {vol_tvl_str}\n"
             f"   RSI: {rsi_str} | {score_emoji} LP Score: {s}/100"
         )
-    body = "\n\n".join(lines) if lines else "Sin pools detectadas aún."
+    body = "\n\n".join(lines) if lines else "No pools detected yet."
     date_str = now_utc.strftime("%d %b %Y")
     return (
-        f"{sep}\n📊 TOP 3 DIARIO — LP SNIPER\n{sep}\n"
+        f"{sep}\n📊 DAILY TOP 3 — LP SNIPER\n{sep}\n"
         f"{body}\n"
         f"{sep}\n"
         f"📅 {date_str} UTC"
@@ -653,7 +653,7 @@ def _build_bluechip_alert(m: dict) -> str:
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi_val  = m.get("rsi")
-    rsi_str  = f"{rsi_val:.0f}" if rsi_val is not None else "N/D"
+    rsi_str  = f"{rsi_val:.0f}" if rsi_val is not None else "N/A"
     lp_score = _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
     apr_rng  = f"{min(apr / 0.20, apr * 3):,.0f}%"
     pool_url = m.get("pool_url", "")
@@ -662,22 +662,22 @@ def _build_bluechip_alert(m: dict) -> str:
     sym_b    = m.get("sym_b", "?")
     chain    = m.get("_chain", "")
     return (
-        f"🔵 OPORTUNIDAD ESTABLE — {source}\n"
+        f"🔵 STABLE OPPORTUNITY — {source}\n"
         f"{sym_a} / {sym_b}\n"
-        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
+        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
         f"⭐ LP Score: {lp_score}/100 ({_lp_label(lp_score)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
         f"📈 Vol 24h: {fmt_money(vol_24h)}\n"
         f"🔄 Vol/TVL: {vol_tvl:.2f}x{fire}\n"
         f"⚡ APR Fees: {apr:,.0f}%\n"
-        f"🚀 APR rango ±10%: {apr_rng}\n"
+        f"🚀 APR range ±10%: {apr_rng}\n"
         f"📉 RSI: {rsi_str}\n"
         f"\n"
-        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f"📋 Contract: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">{source}</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">View on DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -874,7 +874,7 @@ def _build_new_alert(m: dict, label: str) -> str:
     dex      = m.get("_dex",   label)
     chain    = m.get("_chain", "")
     badge    = "🟢" if m.get("in_top100") else "🟡"
-    header   = f"🚨 NUEVA OPORTUNIDAD — {dex} | {chain} {badge}" if chain else f"🚨 NUEVA OPORTUNIDAD — {dex} {badge}"
+    header   = f"🚨 NEW OPPORTUNITY — {dex} | {chain} {badge}" if chain else f"🚨 NEW OPPORTUNITY — {dex} {badge}"
     vol_24h  = m.get("vol_24h", 0)
     fees_24h = m.get("fees_24h", 0)
     tvl      = m.get("tvl", 0)
@@ -885,19 +885,19 @@ def _build_new_alert(m: dict, label: str) -> str:
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi      = m.get("rsi")
-    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
+    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/A"
     lp       = _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
     pool_url = m.get("pool_url", "")
     addr     = m.get("address", "")
     sym_a    = m.get("sym_a", "?")
     sym_b    = m.get("sym_b", "?")
-    apr_rango_line = f"🚀 APR Rango: {apr_rango_str}\n" if apr_rango_str else ""
+    apr_rango_line = f"🚀 APR Range: {apr_rango_str}\n" if apr_rango_str else ""
     return (
         f"{header}\n"
         f"{sym_a} / {sym_b}\n"
-        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
-        f"🎯 Rango sugerido: {range_str}\n"
+        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
+        f"🎯 Suggested range: {range_str}\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
@@ -907,9 +907,9 @@ def _build_new_alert(m: dict, label: str) -> str:
         f"{apr_rango_line}"
         f"📉 RSI: {rsi_str}\n"
         f"\n"
-        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f"📋 Contract: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">{dex}</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">View on DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -925,17 +925,17 @@ def _build_new_decline(
     sym_a    = m.get("sym_a", "?")
     sym_b    = m.get("sym_b", "?")
     return (
-        f"⚠️ POOL DECLIVE — {dex_chain}\n"
+        f"⚠️ POOL DECLINE — {dex_chain}\n"
         f"{sym_a} / {sym_b}\n"
         f"\n"
-        f"📉 Motivo: {html.escape(reason)}\n"
-        f"💧 TVL: {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
-        f"📈 Vol 24h: {fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})\n"
+        f"⚠️ Reason: {html.escape(reason)}\n"
+        f"💧 TVL: {fmt_money(m['tvl'])} (prev: {fmt_money(prev_tvl)})\n"
+        f"📈 Vol 24h: {fmt_money(m['vol_24h'])} (prev: {fmt_money(prev_vol)})\n"
         f"💸 Fees 24h: {fmt_money(m['fees_24h'])}\n"
         f"\n"
-        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f"📋 Contract: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">{dex}</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">View on DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -973,9 +973,9 @@ def _process_new_source(
 
                 reason = None
                 if tvl_chg <= -(DECLINE_TVL_PCT / 100):
-                    reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
+                    reason = f"TVL dropped {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
                 elif vol_chg <= -(DECLINE_VOL_PCT / 100):
-                    reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                    reason = f"Volume dropped {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
 
                 if reason:
                     if send_telegram(_build_new_decline(m, label, reason, prev_tvl, prev_vol)):
@@ -1112,7 +1112,7 @@ def _build_pancake_alert(m: dict) -> str:
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi      = m.get("rsi")
-    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/D"
+    rsi_str  = f"{rsi:.0f}" if rsi is not None else "N/A"
     lp       = _lp_score(vol_24h, tvl, m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", ""))
     pool_url = f"https://pancakeswap.finance/info/v3/pairs/{m['address']}"
     addr     = m.get("address", "")
@@ -1120,13 +1120,13 @@ def _build_pancake_alert(m: dict) -> str:
     sym_b    = m.get("sym_b", "?")
     fee_tier = m.get("fee_tier") or 0
     fee_str  = f"  {fee_tier * 100:.4g}%" if fee_tier else ""
-    apr_rango_line = f"🚀 APR Rango: {apr_rango_str}\n" if apr_rango_str else ""
+    apr_rango_line = f"🚀 APR Range: {apr_rango_str}\n" if apr_rango_str else ""
     return (
-        f"🚨 NUEVA OPORTUNIDAD — {dex} | {chain} {badge}\n"
+        f"🚨 NEW OPPORTUNITY — {dex} | {chain} {badge}\n"
         f"{sym_a} / {sym_b}{fee_str}\n"
-        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
-        f"🎯 Rango sugerido: {range_str}\n"
+        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
+        f"🎯 Suggested range: {range_str}\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
@@ -1136,9 +1136,9 @@ def _build_pancake_alert(m: dict) -> str:
         f"{apr_rango_line}"
         f"📉 RSI: {rsi_str}\n"
         f"\n"
-        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f"📋 Contract: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">PancakeSwap V3</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">View on DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -1151,17 +1151,17 @@ def _build_pancake_decline(m: dict, reason: str, prev_tvl: float, prev_vol: floa
     sym_a    = m.get("sym_a", "?")
     sym_b    = m.get("sym_b", "?")
     return (
-        f"⚠️ POOL DECLIVE — {dex} | {chain}\n"
+        f"⚠️ POOL DECLINE — {dex} | {chain}\n"
         f"{sym_a} / {sym_b}\n"
         f"\n"
-        f"📉 Motivo: {html.escape(reason)}\n"
-        f"💧 TVL: {fmt_money(m['tvl'])} (ant: {fmt_money(prev_tvl)})\n"
-        f"📈 Vol 24h: {fmt_money(m['vol_24h'])} (ant: {fmt_money(prev_vol)})\n"
+        f"⚠️ Reason: {html.escape(reason)}\n"
+        f"💧 TVL: {fmt_money(m['tvl'])} (prev: {fmt_money(prev_tvl)})\n"
+        f"📈 Vol 24h: {fmt_money(m['vol_24h'])} (prev: {fmt_money(prev_vol)})\n"
         f"💸 Fees 24h: {fmt_money(m['fees_24h'])}\n"
         f"\n"
-        f"📋 Contrato: {_fmt_addr(addr)}\n"
+        f"📋 Contract: {_fmt_addr(addr)}\n"
         f'🔗 <a href="{pool_url}">PancakeSwap V3</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr, chain)}">Ver en DexScreener</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr, chain)}">View on DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -1213,9 +1213,9 @@ def run_pancakeswap(ns_state: dict, now_iso: str, rsi_cache: dict, all_qualifyin
                 vol_chg = (m["vol_24h"] - prev_vol) / prev_vol if prev_vol > 0 else 0
                 decline_reason = None
                 if tvl_chg <= -(DECLINE_TVL_PCT / 100):
-                    decline_reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
+                    decline_reason = f"TVL dropped {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
                 elif vol_chg <= -(DECLINE_VOL_PCT / 100):
-                    decline_reason = f"Volumen cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                    decline_reason = f"Volume dropped {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
                 if decline_reason:
                     if send_telegram(_build_pancake_decline(m, decline_reason, prev_tvl, prev_vol)):
                         alerts_sent += 1
