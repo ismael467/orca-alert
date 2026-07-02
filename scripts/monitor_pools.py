@@ -22,6 +22,7 @@ import os
 import html
 import re
 import time
+import traceback
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -1859,8 +1860,76 @@ def main() -> None:
     state   = load_state()
     total   = 0
 
-    # TOP 5 summary — once every 8h at 00:00, 08:00, 16:00 UTC
     pool_cache: dict = state.setdefault("pool_cache", {})
+
+    # Fetch CoinGecko top-N once; shared by Orca + Uniswap
+    print(f"[CoinGecko] Fetching top-{TOP_N_COINS} coins…")
+    top_coins = fetch_top_coins(TOP_N_COINS)
+    print(f"[CoinGecko] Loaded {len(top_coins)} coins")
+
+    rsi_cache:      dict       = {}
+    all_qualifying: list[dict] = []
+    all_bluechip:   list[dict] = []
+
+    try:
+        total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-PANCAKESWAP] Source failed, continuing with remaining sources")
+        traceback.print_exc()
+    time.sleep(3)
+
+    try:
+        total += run_orca(state.setdefault("orca", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-ORCA] Source failed, continuing with remaining sources")
+        traceback.print_exc()
+    time.sleep(3)
+
+    try:
+        total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-UNISWAP-ETHEREUM] Source failed, continuing with remaining sources")
+        traceback.print_exc()
+    time.sleep(3)
+
+    try:
+        total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-UNISWAP-ARBITRUM] Source failed, continuing with remaining sources")
+        traceback.print_exc()
+    time.sleep(3)
+
+    try:
+        total += run_uniswap("base", state.setdefault("uniswap_base", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-UNISWAP-BASE] Source failed, continuing with remaining sources")
+        traceback.print_exc()
+    time.sleep(3)
+
+    try:
+        total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-PROJECTX] Source failed, continuing with remaining sources")
+        traceback.print_exc()
+    time.sleep(3)
+
+    try:
+        total += run_kittenswap(state.setdefault("kittenswap", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-KITTENSWAP] Source failed, continuing with remaining sources")
+        traceback.print_exc()
+    time.sleep(3)
+
+    try:
+        total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
+    except Exception:
+        print("[ERROR-RAYDIUM] Source failed, continuing to summary/state save")
+        traceback.print_exc()
+
+    _update_pool_cache(pool_cache, all_qualifying, now_iso)
+
+    # TOP 5 summary — once every 8h at 00:00, 08:00, 16:00 UTC
+    # Sent after _update_pool_cache above so it reflects this run's fresh data.
     if _should_send_summary(state, now_utc):
         if pool_cache:
             send_telegram(_build_top5_summary(pool_cache, now_utc))
@@ -1877,32 +1946,6 @@ def main() -> None:
         else:
             print("[Daily] No pool cache yet, skipping")
         state["last_top3_date"] = str(now_utc.date())
-
-    # Fetch CoinGecko top-N once; shared by Orca + Uniswap
-    print(f"[CoinGecko] Fetching top-{TOP_N_COINS} coins…")
-    top_coins = fetch_top_coins(TOP_N_COINS)
-    print(f"[CoinGecko] Loaded {len(top_coins)} coins")
-
-    rsi_cache:      dict       = {}
-    all_qualifying: list[dict] = []
-    all_bluechip:   list[dict] = []
-    total += run_pancakeswap(state.setdefault("pancakeswap", {}), now_iso, rsi_cache, all_qualifying, all_bluechip)
-    time.sleep(3)
-    total += run_orca(state.setdefault("orca", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
-    time.sleep(3)
-    total += run_uniswap("ethereum", state.setdefault("uniswap_ethereum", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
-    time.sleep(3)
-    total += run_uniswap("arbitrum", state.setdefault("uniswap_arbitrum", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
-    time.sleep(3)
-    total += run_uniswap("base",     state.setdefault("uniswap_base",     {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
-    time.sleep(3)
-    total += run_projectx(state.setdefault("projectx", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
-    time.sleep(3)
-    total += run_kittenswap(state.setdefault("kittenswap", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
-    time.sleep(3)
-    total += run_raydium(state.setdefault("raydium", {}), now_iso, top_coins, rsi_cache, all_qualifying, all_bluechip)
-
-    _update_pool_cache(pool_cache, all_qualifying, now_iso)
 
     # BLUECHIP alerts — enrich RSI then send with 24h dedup
     _enrich_rsi(all_bluechip, rsi_cache)
