@@ -203,7 +203,7 @@ def _lp_score(
 
 def _fmt_apr_rango(val: float | None) -> str:
     if val is None:
-        return "N/D"
+        return "N/A"
     return "&gt;10,000%" if val > 10_000 else f"{val:,.0f}%"
 
 
@@ -652,10 +652,10 @@ def _merkl_lines(merkl: dict | None, apr: float, W: int) -> list[str]:
         return []
     m_apr     = float(merkl.get("merkl_apr", 0))
     days_left = merkl.get("days_left")
-    days_str  = f"{days_left}d" if days_left is not None else "N/D"
+    days_str  = f"{days_left}d" if days_left is not None else "N/A"
     return [
         f"{'APR Total:':<{W}}{apr + m_apr:,.0f}% (incl. {m_apr:.0f}% Merkl)",
-        f"{'Merkl:':<{W}}{days_str} restantes ✅",
+        f"{'Merkl:':<{W}}{days_str} remaining ✅",
     ]
 
 
@@ -681,11 +681,11 @@ def build_new_alert(m: dict) -> str:
     fee_str  = f"  {fee_rate * 100:.4g}%" if fee_rate else ""
     purl, pulab = _pool_url(m)
     return (
-        f"🚨 NUEVA OPORTUNIDAD — {dex} | SOL\n"
+        f"🚨 NEW OPPORTUNITY — {dex} | SOL\n"
         f"{sym_a} / {sym_b}{fee_str}\n"
-        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
-        f"🎯 Rango sugerido: N/D\n"
+        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
+        f"🎯 Suggested range: N/A\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
@@ -694,10 +694,10 @@ def build_new_alert(m: dict) -> str:
         f"⚡ APR Fees: {apr:,.0f}%\n"
         f"{rsi_line}"
         f"\n"
-        f"📋 Contrato: {_fmt_addr(addr)}\n"
-        f'🔗 <a href="{purl}">Abrir en {pulab}</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr)}">Ver en DexScreener</a>\n'
-        f"⏱ Detectado ahora\n"
+        f"📋 Contract: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{purl}">Open on {pulab}</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr)}">View on DexScreener</a>\n'
+        f"⏱ Detected now\n"
         f"━━━━━━━━━━━━━━━"
     )
 
@@ -723,22 +723,22 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     fee_str  = f"  {fee_rate * 100:.4g}%" if fee_rate else ""
     purl, pulab = _pool_url(m)
     return (
-        f"⚠️ POOL DECLIVE — {dex} | SOL\n"
+        f"⚠️ POOL DECLINE — {dex} | SOL\n"
         f"{sym_a} / {sym_b}{fee_str}\n"
-        f"<b>💰 Fees/día en rango ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 días en rango ($1K): ${fees_7d:.2f}</b>\n"
+        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
+        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
-        f"💧 TVL: {fmt_money(tvl)} (ant: {fmt_money(prev_tvl)})\n"
-        f"📈 Vol 24h: {fmt_money(vol_24h)} (ant: {fmt_money(prev_vol)})\n"
+        f"💧 TVL: {fmt_money(tvl)} (prev: {fmt_money(prev_tvl)})\n"
+        f"📈 Vol 24h: {fmt_money(vol_24h)} (prev: {fmt_money(prev_vol)})\n"
         f"🔄 Vol/TVL: {vol_tvl:.2f}x\n"
         f"⚡ APR Fees: {apr:,.0f}%\n"
         f"{rsi_line}"
-        f"⚠️ Motivo: {html.escape(reason)}\n"
+        f"⚠️ Reason: {html.escape(reason)}\n"
         f"\n"
-        f"📋 Contrato: {_fmt_addr(addr)}\n"
-        f'🔗 <a href="{purl}">Abrir en {pulab}</a>\n'
-        f'🔗 <a href="{_dexscreener_url(addr)}">Ver en DexScreener</a>\n'
+        f"📋 Contract: {_fmt_addr(addr)}\n"
+        f'🔗 <a href="{purl}">Open on {pulab}</a>\n'
+        f'🔗 <a href="{_dexscreener_url(addr)}">View on DexScreener</a>\n'
         f"━━━━━━━━━━━━━━━"
     )
 
