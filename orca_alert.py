@@ -58,11 +58,12 @@ BLUE_CHIP_TOKENS = {
 }
 
 # ── Meteora DLMM ─────────────────────────────────────────────────────────────
-METEORA_DLMM_API = "https://dlmm-api.meteora.ag"   # official (use when available)
+# Official API (dlmm-api.meteora.ag) returns 404 as of 2026-07 — GeckoTerminal
+# is the only working source, used directly (no more dead-endpoint attempt).
 METEORA_GT_URL   = "https://api.geckoterminal.com/api/v2/networks/solana/dexes/meteora/pools"
 METEORA_MIN_TVL  = 100_000
 METEORA_MIN_VOL  =  50_000
-METEORA_FEE_EST  = 0.0010  # 0.10% default fee estimate when official API is unavailable
+METEORA_FEE_EST  = 0.0010  # 0.10% default fee estimate (GeckoTerminal doesn't expose real fee rate)
 
 # ── Raydium CLMM ──────────────────────────────────────────────────────────────
 RAYDIUM_CLMM_URL = "https://api-v3.raydium.io/pools/info/list"
@@ -399,50 +400,8 @@ def _dexscreener_url(address: str) -> str:
 
 # ── Meteora DLMM fetchers ─────────────────────────────────────────────────────
 
-def _fetch_meteora_official() -> list[dict] | None:
-    """Try the official Meteora DLMM API. Returns raw pool list or None on failure."""
-    try:
-        r = requests.get(
-            f"{METEORA_DLMM_API}/pair/all_with_pagination",
-            params={"page": 0, "limit": 100, "sort_key": "volume", "order_by": "desc"},
-            timeout=20,
-        )
-        if r.status_code != 200:
-            return None
-        data = r.json()
-        pairs = data.get("pairs", data.get("data", []))
-        if not pairs:
-            return None
-        result = []
-        for p in pairs:
-            tvl     = float(p.get("liquidity") or 0)
-            vol_24h = float(p.get("trade_volume_24h") or 0)
-            if tvl < METEORA_MIN_TVL or vol_24h < METEORA_MIN_VOL:
-                continue
-            fee_rate  = float(p.get("base_fee_percentage") or 10) / 100  # API gives %, e.g. "0.10"
-            fees_24h  = float(p.get("fees_24h") or p.get("today_fees") or vol_24h * fee_rate)
-            raw_name  = p.get("name", "")  # "SOL-USDC" format
-            parts     = raw_name.replace("-", "/").split("/")
-            sym_a     = parts[0].strip() if parts else "?"
-            sym_b     = parts[1].strip() if len(parts) > 1 else "?"
-            result.append({
-                "_source": "official",
-                "address": p.get("address", ""),
-                "sym_a": sym_a,
-                "sym_b": sym_b,
-                "tvl": tvl,
-                "vol_24h": vol_24h,
-                "fees_24h": fees_24h,
-                "fee_rate": fee_rate,
-            })
-        return result or None
-    except Exception as exc:
-        print(f"[Meteora API] {exc}")
-        return None
-
-
 def _fetch_meteora_geckoterminal() -> list[dict]:
-    """Fetch Meteora pools via GeckoTerminal (fallback). Paginates up to 5 pages."""
+    """Fetch Meteora pools via GeckoTerminal (primary and only source). Paginates up to 5 pages."""
     result = []
     seen   = set()
     for page in range(1, 6):
@@ -491,7 +450,7 @@ def _fetch_meteora_geckoterminal() -> list[dict]:
 
 def fetch_meteora_dlmm(top100_ids: set[str]) -> list[dict]:
     """Return qualifying Meteora DLMM pools as m-dicts compatible with existing alert functions."""
-    raw_pools = _fetch_meteora_official() or _fetch_meteora_geckoterminal()
+    raw_pools = _fetch_meteora_geckoterminal()
 
     result = []
     for raw in raw_pools:

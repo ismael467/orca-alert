@@ -71,6 +71,12 @@ NEW_PRICE_MIN  = -10.0   # %
 NEW_PRICE_MAX  =  20.0   # %
 NEW_SPIKE_MIN  =   2.0   # × 6-day average
 
+# Raydium-specific APR band — its pool universe is blue-chip/deep-liquidity
+# heavy with real organic volume (not spike-driven like Orca's), so the 200%
+# floor above filtered out almost everything (e.g. WSOL/USDC ~36% APR).
+RAYDIUM_MIN_APR = 15.0
+RAYDIUM_MAX_APR = 1_000.0
+
 # ProjectX-specific filters — relaxed: mature stable pools, no spike pattern
 PROJECTX_MIN_TVL =  50_000
 PROJECTX_MIN_VOL =  25_000
@@ -840,7 +846,7 @@ def _is_trap(m: dict) -> bool:
     return False
 
 
-def passes_new_filters(m: dict) -> bool:
+def passes_new_filters(m: dict, min_apr: float = NEW_MIN_APR, max_apr: float = NEW_MAX_APR) -> bool:
     if _is_trap(m):
         return False
     for sym in (m.get("sym_a", "").upper(), m.get("sym_b", "").upper()):
@@ -850,7 +856,7 @@ def passes_new_filters(m: dict) -> bool:
         return False
     if m["vol_24h"] < NEW_MIN_VOL:
         return False
-    if not (NEW_MIN_APR <= m["apr"] <= NEW_MAX_APR):
+    if not (min_apr <= m["apr"] <= max_apr):
         return False
     pc = m.get("price_change_24h")
     if pc is not None and not (NEW_PRICE_MIN <= pc <= NEW_PRICE_MAX):
@@ -1843,7 +1849,7 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
     qualifying: list[dict] = []
     for pool in pools:
         m = _compute_raydium_metrics(pool, top_coins)
-        if m and passes_new_filters(m):
+        if m and passes_new_filters(m, RAYDIUM_MIN_APR, RAYDIUM_MAX_APR):
             m["_dex"] = "Raydium"
             m["_chain"] = "Solana"
             qualifying.append(m)
