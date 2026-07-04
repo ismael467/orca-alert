@@ -51,6 +51,11 @@ PANCAKE_MIN_VOL  = 50_000
 PANCAKE_MIN_FEES = 500
 PANCAKE_MAX_TVL  = 5_000_000
 
+# Added gate — the four thresholds above are the original filters and are left
+# untouched; this was missing entirely, letting low-quality pools (e.g. TWT
+# Score 10-20/100) through since nothing here ever checked LP score.
+HARD_MIN_LP_SCORE = 40
+
 BTCB_ADDR = "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c"
 WBNB_ADDR = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"
 
@@ -565,8 +570,11 @@ def _build_top5_summary(pool_cache: dict, now_utc: datetime) -> str:
         score_emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
         rsi_val = p.get("rsi")
         rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/A"
+        dex = p.get("dex", "")
+        chain = p.get("chain", "")
+        dex_chain = f" — {dex} | {chain}" if dex and chain else ""
         lines.append(
-            f"{medals[i]} {p['name']} — {score_emoji} {s}/100\n"
+            f"{medals[i]} {p['name']}{dex_chain} — {score_emoji} {s}/100\n"
             f"   APR: {p['apr']:,.0f}% | Fees/day ($1K): ${p.get('fees_day_1k', 0):.2f} | RSI: {rsi_str}"
         )
     body = "\n".join(lines) if lines else "No pools detected yet."
@@ -1089,6 +1097,8 @@ def _compute_pancake_metrics(pool: dict) -> dict | None:
 
 def _passes_pancake_filters(m: dict) -> bool:
     if _is_trap(m):
+        return False
+    if _lp_score(m["vol_24h"], m["tvl"], m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", "")) < HARD_MIN_LP_SCORE:
         return False
     vol_ok = m["vol_24h"] >= PANCAKE_MIN_VOL or m["vol_h1"] * 24 >= PANCAKE_MIN_VOL
     return (
