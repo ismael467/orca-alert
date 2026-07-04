@@ -210,12 +210,12 @@ def _fmt_apr_rango(val: float | None) -> str:
 
 def _lp_label(score: int) -> str:
     if score >= 80:
-        return "Excelente"
+        return "Excellent"
     if score >= 60:
-        return "Bueno"
+        return "Good"
     if score >= 40:
-        return "Regular"
-    return "Bajo"
+        return "Average"
+    return "Low"
 
 
 def _pool_url(m: dict) -> tuple[str, str]:
@@ -778,11 +778,11 @@ def main() -> None:
 
                 decline_reason = None
                 if tvl_chg <= -(DECLINE_TVL_PCT / 100):
-                    decline_reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
+                    decline_reason = f"TVL dropped {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
                 elif vol_chg <= -(DECLINE_VOL_PCT / 100):
-                    decline_reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                    decline_reason = f"Volume dropped {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
                 elif vol_tvl_chg <= -(DECLINE_VOL_TVL_PCT / 100):
-                    decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
+                    decline_reason = f"Vol/TVL dropped {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
 
                 if decline_reason:
                     if prev.get("last_alert", "") > cutoff_4h:
@@ -848,11 +848,11 @@ def main() -> None:
 
                 decline_reason = None
                 if tvl_chg <= -(DECLINE_TVL_PCT / 100):
-                    decline_reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
+                    decline_reason = f"TVL dropped {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
                 elif vol_chg <= -(DECLINE_VOL_PCT / 100):
-                    decline_reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                    decline_reason = f"Volume dropped {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
                 elif vol_tvl_chg <= -(DECLINE_VOL_TVL_PCT / 100):
-                    decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
+                    decline_reason = f"Vol/TVL dropped {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
 
                 if decline_reason:
                     if prev.get("last_alert", "") > cutoff_4h:
@@ -918,11 +918,11 @@ def main() -> None:
 
                 decline_reason = None
                 if tvl_chg <= -(DECLINE_TVL_PCT / 100):
-                    decline_reason = f"TVL cayó {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
+                    decline_reason = f"TVL dropped {tvl_chg * 100:.1f}% (>{DECLINE_TVL_PCT}%)"
                 elif vol_chg <= -(DECLINE_VOL_PCT / 100):
-                    decline_reason = f"Vol cayó {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
+                    decline_reason = f"Volume dropped {vol_chg * 100:.1f}% (>{DECLINE_VOL_PCT}%)"
                 elif vol_tvl_chg <= -(DECLINE_VOL_TVL_PCT / 100):
-                    decline_reason = f"Vol/TVL cayó {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
+                    decline_reason = f"Vol/TVL dropped {vol_tvl_chg * 100:.1f}% (>{DECLINE_VOL_TVL_PCT}%)"
 
                 if decline_reason:
                     if prev.get("last_alert", "") > cutoff_4h:
