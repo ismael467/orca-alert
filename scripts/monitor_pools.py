@@ -80,7 +80,11 @@ RAYDIUM_MAX_APR = 1_000.0
 # ProjectX-specific filters — relaxed: mature stable pools, no spike pattern
 PROJECTX_MIN_TVL =  50_000
 PROJECTX_MIN_VOL =  25_000
-PROJECTX_MIN_APR =   100.0
+# Calibrated against live pool data: peg/derivative-arb pairs (e.g. WHYPE/kHYPE,
+# USDC/USD₮0) top out at ~0.65% APR with no real yield; genuine blue-chip pairs
+# with organic volume (WHYPE/USDC, WHYPE/UBTC, WHYPE/UETH, ...) start at ~10.5%.
+# 5.0 sits in that gap with margin on both sides.
+PROJECTX_MIN_APR =     5.0
 PROJECTX_MAX_APR = 5_000.0
 TOP_N_COINS    = 100
 
