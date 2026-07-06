@@ -574,14 +574,13 @@ def _build_top5_summary(pool_cache: dict, now_utc: datetime) -> str:
     for i, p in enumerate(pools):
         s = p.get("lp_score", 0)
         score_emoji = "🟢" if s >= 70 else ("🟡" if s >= 50 else "🔴")
-        rsi_val = p.get("rsi")
-        rsi_str = f"{rsi_val:.0f}" if rsi_val is not None else "N/A"
         dex = p.get("dex", "")
         chain = p.get("chain", "")
-        dex_chain = f" — {dex} | {chain}" if dex and chain else ""
+        dex_chain = f"{dex} | {chain}" if dex and chain else ""
         lines.append(
-            f"{medals[i]} {p['name']}{dex_chain} — {score_emoji} {s}/100\n"
-            f"   APR: {p['apr']:,.0f}% | Fees/day ($1K): ${p.get('fees_day_1k', 0):.2f} | RSI: {rsi_str}"
+            f"{medals[i]} {p['name']}\n"
+            f"   {dex_chain} — {score_emoji} {s}/100\n"
+            f"   APR: {p['apr']:,.0f}%"
         )
     body = "\n".join(lines) if lines else "No pools detected yet."
     date_str = f"{now_utc.day} {now_utc.strftime('%b')}"
