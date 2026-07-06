@@ -632,25 +632,32 @@ def build_new_alert(m: dict) -> str:
     fees_7d  = fees_1k * 7
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
-    dex      = m.get("dex", "Orca")
-    addr     = m.get("address", "")
-    sym_a    = m.get("symbol_a", "?")
-    sym_b    = m.get("symbol_b", "?")
-    fee_rate = m.get("fee_rate") or 0
-    fee_str  = f"  {fee_rate * 100:.4g}%" if fee_rate else ""
+    dex        = m.get("dex", "Orca")
+    is_meteora = dex == "Meteora DLMM"
+    addr       = m.get("address", "")
+    sym_a      = m.get("symbol_a", "?")
+    sym_b      = m.get("symbol_b", "?")
+    fee_rate   = m.get("fee_rate") or 0
+    fee_str    = f"  {fee_rate * 100:.4g}%" if fee_rate else ""
+    range_line = (
+        "🎯 Suggested range: N/A (bin data not available via current source)\n"
+        if is_meteora else
+        "🎯 Suggested range: N/A\n"
+    )
+    apr_fee_note = f" (est. {fee_rate * 100:.2f}% fee)" if is_meteora else ""
     purl, pulab = _pool_url(m)
     return (
         f"🚨 NEW OPPORTUNITY — {dex} | SOL\n"
         f"{sym_a} / {sym_b}{fee_str}\n"
         f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
         f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
-        f"🎯 Suggested range: N/A\n"
+        f"{range_line}"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
         f"📈 Vol 24h: {fmt_money(vol_24h)}\n"
         f"🔄 Vol/TVL: {vol_tvl:.2f}x{fire}\n"
-        f"⚡ APR Fees: {apr:,.0f}%\n"
+        f"⚡ APR Fees: {apr:,.0f}%{apr_fee_note}\n"
         f"{rsi_line}"
         f"\n"
         f"📋 Contract: {_fmt_addr(addr)}\n"
