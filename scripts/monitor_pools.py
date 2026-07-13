@@ -849,7 +849,12 @@ def _is_trap(m: dict) -> bool:
     return False
 
 
-def passes_new_filters(m: dict, min_apr: float = NEW_MIN_APR, max_apr: float = NEW_MAX_APR) -> bool:
+def passes_new_filters(
+    m: dict,
+    min_apr: float = NEW_MIN_APR,
+    max_apr: float = NEW_MAX_APR,
+    min_lp_score: float = 0.0,
+) -> bool:
     if _is_trap(m):
         return False
     for sym in (m.get("sym_a", "").upper(), m.get("sym_b", "").upper()):
@@ -868,6 +873,8 @@ def passes_new_filters(m: dict, min_apr: float = NEW_MIN_APR, max_apr: float = N
     if spike is not None and spike < NEW_SPIKE_MIN:
         return False
     if not m.get("in_top100"):
+        return False
+    if _lp_score(m["vol_24h"], m["tvl"], m.get("volume_spike"), m.get("sym_a", ""), m.get("sym_b", "")) < min_lp_score:
         return False
     return True
 
@@ -1519,7 +1526,7 @@ def run_uniswap(
     qualifying: list[dict] = []
     for pool in raw_pools:
         m = _compute_uniswap_metrics(pool, chain, top_coins, token_cg_map)
-        if m and passes_new_filters(m):
+        if m and passes_new_filters(m, min_lp_score=HARD_MIN_LP_SCORE):
             m["_dex"] = "Uniswap V3"
             m["_chain"] = chain_display
             qualifying.append(m)
@@ -1803,7 +1810,9 @@ def _compute_raydium_metrics(pool: dict, top_coins: dict[str, dict]) -> dict | N
 
     six_day_vol = max(vol_week - vol_day, 0.0)
     six_day_avg = six_day_vol / 6 if six_day_vol > 0 else 0.0
-    vol_spike   = vol_day / six_day_avg if six_day_avg > 0 else None
+    # No prior-day volume to compare against → treat as failing the spike
+    # check (0.0) rather than None, which would silently bypass it.
+    vol_spike   = vol_day / six_day_avg if six_day_avg > 0 else 0.0
 
     mint_a = pool.get("mintA") or {}
     mint_b = pool.get("mintB") or {}
@@ -1852,7 +1861,7 @@ def run_raydium(ns_state: dict, now_iso: str, top_coins: dict[str, dict], rsi_ca
     qualifying: list[dict] = []
     for pool in pools:
         m = _compute_raydium_metrics(pool, top_coins)
-        if m and passes_new_filters(m, RAYDIUM_MIN_APR, RAYDIUM_MAX_APR):
+        if m and passes_new_filters(m, RAYDIUM_MIN_APR, RAYDIUM_MAX_APR, min_lp_score=HARD_MIN_LP_SCORE):
             m["_dex"] = "Raydium"
             m["_chain"] = "Solana"
             qualifying.append(m)
