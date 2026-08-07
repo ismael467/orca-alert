@@ -460,8 +460,8 @@
       "bsc_0x749e2cff6164f2d1e7545094305b1ef5fcbdeab5": {
         "first_seen": "2026-07-06T21:49:43.418529+00:00",
         "last_alert": "2026-07-06T21:49:43.418529+00:00",
-        "last_tvl": 37480.0334,
-        "last_vol_24h": 86237.9043542787,
+        "last_tvl": 33267.9745,
+        "last_vol_24h": 123576.233015797,
         "alerted_decline": false,
         "name": "GMT / USDT 0.25%"
       },
@@ -644,8 +644,8 @@
       "bsc_0x4a4bea953813c118c260be9a26b2321e57aa62e5": {
         "first_seen": "2026-08-02T06:20:15.493548+00:00",
         "last_alert": "2026-08-02T06:20:15.493548+00:00",
-        "last_tvl": 473648.6395,
-        "last_vol_24h": 1280304.55354713,
+        "last_tvl": 474355.567,
+        "last_vol_24h": 1290161.03433171,
         "alerted_decline": false,
         "name": "MarsCoin / USDT 1%"
       },
@@ -708,8 +708,8 @@
       "bsc_0x3e25b2e23a00f5da1e31a691670f66e38e175630": {
         "first_seen": "2026-08-05T13:13:03.805133+00:00",
         "last_alert": "2026-08-05T13:13:03.805133+00:00",
-        "last_tvl": 55950.151,
-        "last_vol_24h": 274388.864423139,
+        "last_tvl": 55795.2642,
+        "last_vol_24h": 269001.630204689,
         "alerted_decline": false,
         "name": "币有 / USDT 1%"
       },
@@ -732,13 +732,13 @@
       "bsc_0xb297d74cbe67ba9a0fa92862c31e501228e8b00b": {
         "first_seen": "2026-08-07T08:36:27.639164+00:00",
         "last_alert": "2026-08-07T08:36:27.639164+00:00",
-        "last_tvl": 96736.8116,
-        "last_vol_24h": 216984.644486981,
+        "last_tvl": 100029.0604,
+        "last_vol_24h": 238554.093873838,
         "alerted_decline": false,
         "name": "GMT / USDT 1%"
       }
     },
-    "qualifying_count": 2
+    "qualifying_count": 4
   },
   "orca": {
     "qualifying_count": 6,
@@ -1007,7 +1007,7 @@
       }
     }
   },
-  "last_run": "2026-08-07T10:28:20.925847+00:00",
+  "last_run": "2026-08-07T11:15:43.703863+00:00",
   "uniswap_ethereum": {
     "qualifying_count": 0,
     "alerted_pools": {
@@ -1315,25 +1315,25 @@
     }
   },
   "projectx": {
-    "qualifying_count": 11,
+    "qualifying_count": 12,
     "alerted_pools": {
       "0x422e586c906eb241f784b4f5a633c2c7e59a2f54": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 5979058.573274075,
+        "last_tvl": 5993925.26088173,
         "last_vol_24h": 1950750.6654164454,
         "alerted_decline": true,
         "name": "WHYPE/USDC (0.30%)"
       },
       "0x6c9a33e3b592c0d65b3ba59355d5be0d38259285": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 17453674.42475087,
+        "last_tvl": 17457379.370357323,
         "last_vol_24h": 37163540.694166124,
         "alerted_decline": true,
         "name": "WHYPE/USDC (0.05%)"
       },
       "0x043538c4d9df365833b741ba2a3555787de947d3": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 258523.19955275263,
+        "last_tvl": 258918.65173556836,
         "last_vol_24h": 259265.69943180302,
         "alerted_decline": true,
         "name": "UPUMP/USD₮0 (0.30%)"
@@ -1347,7 +1347,7 @@
       },
       "0xaf80230eb13222db743c21762f65a046bb5f5437": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 1022649.1668431633,
+        "last_tvl": 1023889.3483653415,
         "last_vol_24h": 173879.8163823011,
         "alerted_decline": true,
         "name": "WHYPE/UETH (0.30%)"
@@ -1361,28 +1361,28 @@
       },
       "0x467364bd2a633208b4534f5b7ec11d24604546e4": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 131456.17654531417,
+        "last_tvl": 131670.77123829845,
         "last_vol_24h": 48555.669422865634,
         "alerted_decline": true,
         "name": "UBTC/kHYPE (0.30%)"
       },
       "0xbd19e19e4b70eb7f248695a42208bc1edbbfb57d": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 768491.8171857714,
+        "last_tvl": 769029.3555779936,
         "last_vol_24h": 935150.0349965115,
         "alerted_decline": true,
         "name": "WHYPE/USD₮0 (0.05%)"
       },
       "0x0d6ecb912b6ee160e95bc198b618acc1bcb92525": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 4848205.591360115,
+        "last_tvl": 4856723.695251966,
         "last_vol_24h": 1030964.5774691951,
         "alerted_decline": true,
         "name": "WHYPE/UBTC (0.30%)"
       },
       "0xc477f349f2912e034eac45bc41ec1f643580db2e": {
         "first_seen": "2026-06-20T01:38:00.929917+00:00",
-        "last_tvl": 249292.36040480057,
+        "last_tvl": 249774.30197783245,
         "last_vol_24h": 56690.4395706609,
         "alerted_decline": true,
         "name": "USOL/WHYPE (0.30%)"
@@ -1403,14 +1403,14 @@
       },
       "0xa4abf3edc4c470675c2dfd01b7e23a81a89cf24e": {
         "first_seen": "2026-06-27T00:01:00.409949+00:00",
-        "last_tvl": 357673.15201255126,
+        "last_tvl": 357744.42905322154,
         "last_vol_24h": 68388.1878862672,
         "alerted_decline": true,
         "name": "UBTC/USDC (0.30%)"
       },
       "0x78cc152a531dbde2f3fe7001ad659fa120fa893b": {
         "first_seen": "2026-07-06T13:07:10.842352+00:00",
-        "last_tvl": 250441.39977829534,
+        "last_tvl": 251566.8472080478,
         "last_vol_24h": 294563.9538003173,
         "alerted_decline": true,
         "name": "UPUMP/WHYPE (0.30%)"
@@ -1431,7 +1431,7 @@
       },
       "0xfd0cb41a4a28b5ca13affe65cd5924f461b3c850": {
         "first_seen": "2026-07-06T13:07:10.842352+00:00",
-        "last_tvl": 393793.7036920037,
+        "last_tvl": 394081.1645597374,
         "last_vol_24h": 164490.5932012666,
         "alerted_decline": true,
         "name": "UBTC/USD₮0 (0.05%)"
@@ -1501,7 +1501,7 @@
       },
       "0xc096da06e8fa70386dedbc5d4d6b2a453b9106f5": {
         "first_seen": "2026-07-29T22:42:36.664693+00:00",
-        "last_tvl": 51644.07607177861,
+        "last_tvl": 51448.765143170036,
         "last_vol_24h": 31919.383739,
         "alerted_decline": false,
         "name": "USD₮0/XAUt0 (0.05%)"
@@ -1828,8 +1828,8 @@
       },
       "25bztR81eg6CTvxVm5sJkDcXJavVUZeqHf6kSkbhawoM": {
         "first_seen": "2026-08-07T00:08:21.192415+00:00",
-        "last_tvl": 200328.16,
-        "last_vol_24h": 197050.30462808977,
+        "last_tvl": 199329.24,
+        "last_vol_24h": 190142.89684929544,
         "alerted_decline": false,
         "name": "TTWO/USDC (0.25%)"
       },
@@ -1842,15 +1842,15 @@
       },
       "5XHY6LqjrD6cULEEjwcDBycG8StMQxgubPKDrUcsKSru": {
         "first_seen": "2026-08-07T03:13:06.797231+00:00",
-        "last_tvl": 100025.0,
-        "last_vol_24h": 645190.6000717701,
+        "last_tvl": 100016.3,
+        "last_vol_24h": 663880.7754332109,
         "alerted_decline": false,
         "name": "XMR/USDC (0.01%)"
       },
       "bF8T7KNJBTGSLJnhpLc6PJ6g3Wr2pW6HGoQUXMjgAiy": {
         "first_seen": "2026-08-07T09:35:22.092295+00:00",
-        "last_tvl": 100092.17,
-        "last_vol_24h": 532319.2584083461,
+        "last_tvl": 100095.12,
+        "last_vol_24h": 545698.5145588224,
         "alerted_decline": false,
         "name": "XMR/USDC (0.01%)"
       }
@@ -1868,7 +1868,7 @@
       "source": "",
       "dex": "Orca",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "AgeSxtVWWMojFWYNrXKnVp9cFuC5CQ7M4rzmrseLxfUj": {
       "name": "USDC/SPX (0.30%)",
@@ -1881,7 +1881,7 @@
       "source": "",
       "dex": "Orca",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "FfQtSPNUSTDZwNBhJLgpVPG95ediXfeFnfZnoGPELKML": {
       "name": "SOL/PUPS (2.00%)",
@@ -1894,7 +1894,7 @@
       "source": "",
       "dex": "Orca",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "4nAiqm5QiZiwh1sMpmuJJdVUH12Fst2kPPzApNfppQGd": {
       "name": "SOL/SAMO (1.00%)",
@@ -1907,7 +1907,7 @@
       "source": "",
       "dex": "Orca",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "2UhFnySoJi6c89aydGAGS7ZRemo2dbkFRhvSJqDX4gHJ": {
       "name": "SOL/JTO (0.30%)",
@@ -1920,7 +1920,7 @@
       "source": "",
       "dex": "Orca",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "H6dRN9PVGHjGt1sxttHJR5Jk5mrMSTRsfSUo68WfLaU8": {
       "name": "SOL/FAT (0.16%)",
@@ -1933,163 +1933,163 @@
       "source": "",
       "dex": "Orca",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0x6c9a33e3b592c0d65b3ba59355d5be0d38259285": {
       "name": "WHYPE/USDC (0.05%)",
       "apr": 38.19894788117965,
-      "fees_day_1k": 1.0646337209506127,
+      "fees_day_1k": 1.0644077758105526,
       "rsi": null,
       "lp_score": 60,
       "apr_rango": null,
-      "vol_tvl": 2.1292674419012254,
+      "vol_tvl": 2.128815551621105,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0x422e586c906eb241f784b4f5a633c2c7e59a2f54": {
       "name": "WHYPE/USDC (0.30%)",
       "apr": 35.62641976905544,
-      "fees_day_1k": 0.9787915479551321,
+      "fees_day_1k": 0.9763638586625364,
       "rsi": null,
       "lp_score": 30,
       "apr_rango": null,
-      "vol_tvl": 0.3262638493183774,
+      "vol_tvl": 0.32545461955417876,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0x78cc152a531dbde2f3fe7001ad659fa120fa893b": {
       "name": "UPUMP/WHYPE (0.30%)",
       "apr": 127.23883113294232,
-      "fees_day_1k": 3.528537462988328,
+      "fees_day_1k": 3.512751665048025,
       "rsi": null,
       "lp_score": 30,
       "apr_rango": null,
-      "vol_tvl": 1.1761791543294429,
+      "vol_tvl": 1.1709172216826749,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0xbd19e19e4b70eb7f248695a42208bc1edbbfb57d": {
       "name": "WHYPE/USD₮0 (0.05%)",
       "apr": 22.48877001178759,
-      "fees_day_1k": 0.6084320054447977,
+      "fees_day_1k": 0.6080067218589228,
       "rsi": null,
       "lp_score": 35,
       "apr_rango": null,
-      "vol_tvl": 1.2168640108895954,
+      "vol_tvl": 1.2160134437178456,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0xaf80230eb13222db743c21762f65a046bb5f5437": {
       "name": "WHYPE/UETH (0.30%)",
       "apr": 18.672983276507257,
-      "fees_day_1k": 0.5100864167886263,
+      "fees_day_1k": 0.5094685768337277,
       "rsi": null,
       "lp_score": 20,
       "apr_rango": null,
-      "vol_tvl": 0.17002880559620878,
+      "vol_tvl": 0.16982285894457586,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0x0d6ecb912b6ee160e95bc198b618acc1bcb92525": {
       "name": "WHYPE/UBTC (0.30%)",
       "apr": 23.43940760303068,
-      "fees_day_1k": 0.6379460759501135,
+      "fees_day_1k": 0.6368271959616033,
       "rsi": null,
       "lp_score": 20,
       "apr_rango": null,
-      "vol_tvl": 0.2126486919833712,
+      "vol_tvl": 0.21227573198720107,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0x12df9913e9e08453440e3c4b1ae73819160b513e": {
-      "name": "WHYPE/USDC (0.0511%)",
-      "apr": 42.16932127991908,
-      "fees_day_1k": 1.1553238706827145,
+      "name": "WHYPE/USDC (0.0508%)",
+      "apr": 42.88468134767791,
+      "fees_day_1k": 1.17492277664871,
       "rsi": null,
       "lp_score": 50,
       "apr_rango": null,
-      "vol_tvl": 2.1451234322559207,
+      "vol_tvl": 2.184801223178275,
       "source": "",
       "dex": "KittenSwap",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0x65818645f86f5019680ad79ba7606943d672a5e9": {
-      "name": "WHYPE/USDC (0.1053%)",
-      "apr": 10.762455660605104,
-      "fees_day_1k": 0.2948617989206878,
+      "name": "WHYPE/USDC (0.1052%)",
+      "apr": 11.084879268746493,
+      "fees_day_1k": 0.3036953224314108,
       "rsi": null,
       "lp_score": 25,
       "apr_rango": null,
-      "vol_tvl": 0.2784531252296541,
+      "vol_tvl": 0.28685304874376544,
       "source": "",
       "dex": "KittenSwap",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0xaad2e0b0ff0a4124f2d8e5bb9f0809a79b389bc0": {
-      "name": "WHYPE/USD₮0 (0.1053%)",
-      "apr": 10.572727258128603,
-      "fees_day_1k": 0.289663760496674,
+      "name": "WHYPE/USD₮0 (0.1052%)",
+      "apr": 10.876959825087209,
+      "fees_day_1k": 0.2979988993174577,
       "rsi": null,
       "lp_score": 10,
       "apr_rango": null,
-      "vol_tvl": 0.27362594623699166,
+      "vol_tvl": 0.28155365274490335,
       "source": "",
       "dex": "KittenSwap",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0x043538c4d9df365833b741ba2a3555787de947d3": {
       "name": "UPUMP/USD₮0 (0.30%)",
       "apr": 108.42819957219969,
-      "fees_day_1k": 3.0086162465922004,
+      "fees_day_1k": 3.0040211204628364,
       "rsi": null,
       "lp_score": 30,
       "apr_rango": null,
-      "vol_tvl": 1.0028720821974002,
+      "vol_tvl": 1.0013403734876123,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0xa4abf3edc4c470675c2dfd01b7e23a81a89cf24e": {
       "name": "UBTC/USDC (0.30%)",
       "apr": 20.919504360205025,
-      "fees_day_1k": 0.5736090687947473,
+      "fees_day_1k": 0.5734947828587412,
       "rsi": null,
       "lp_score": 20,
       "apr_rango": null,
-      "vol_tvl": 0.19120302293158242,
+      "vol_tvl": 0.19116492761958037,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0xc477f349f2912e034eac45bc41ec1f643580db2e": {
       "name": "USOL/WHYPE (0.30%)",
       "apr": 25.17869843529232,
-      "fees_day_1k": 0.6822163279926473,
+      "fees_day_1k": 0.6808999859684387,
       "rsi": null,
       "lp_score": 10,
       "apr_rango": null,
-      "vol_tvl": 0.2274054426642158,
+      "vol_tvl": 0.22696666198947957,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0xb0ca298dd776421ee1b9b053c06168971395cd1a": {
       "name": "USDC/AVLT (2.00%)",
@@ -2145,16 +2145,16 @@
     },
     "bsc_0x4a4bea953813c118c260be9a26b2321e57aa62e5": {
       "name": "MarsCoin / USDT 1%",
-      "apr": 986.6198761554818,
-      "fees_day_1k": 27.03068153850635,
+      "apr": 992.7337429795026,
+      "fees_day_1k": 27.19818473916445,
       "rsi": null,
       "lp_score": 50,
       "apr_rango": null,
-      "vol_tvl": 2.703068153850635,
+      "vol_tvl": 2.7198184739164453,
       "source": "",
       "dex": "PancakeSwap V3",
       "chain": "BSC",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "bsc_0xb0f5e5400e8f0f7c242f2b7740c004f020579c41": {
       "name": "TSLAB / USDT 0.25%",
@@ -2172,28 +2172,28 @@
     "0x467364bd2a633208b4534f5b7ec11d24604546e4": {
       "name": "UBTC/kHYPE (0.30%)",
       "apr": 40.78597764179465,
-      "fees_day_1k": 1.1081031876686611,
+      "fees_day_1k": 1.1062972207018367,
       "rsi": null,
       "lp_score": 0,
       "apr_rango": null,
-      "vol_tvl": 0.369367729222887,
+      "vol_tvl": 0.36876574023394554,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "0xfd0cb41a4a28b5ca13affe65cd5924f461b3c850": {
       "name": "UBTC/USD₮0 (0.05%)",
       "apr": 7.6699447421098705,
-      "fees_day_1k": 0.20885376233683892,
+      "fees_day_1k": 0.20870141482787366,
       "rsi": null,
       "lp_score": 10,
       "apr_rango": null,
-      "vol_tvl": 0.41770752467367783,
+      "vol_tvl": 0.4174028296557474,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "G39wywquKbHK8F2wZZZFX3fcsyG91VCCbbr6WEVp5axy": {
       "name": "CRCLx/USDC (0.25%)",
@@ -2210,16 +2210,16 @@
     },
     "bsc_0x3e25b2e23a00f5da1e31a691670f66e38e175630": {
       "name": "币有 / USDT 1%",
-      "apr": 1923.7351783813929,
-      "fees_day_1k": 52.70507338031213,
+      "apr": 1759.7478286465662,
+      "fees_day_1k": 48.212269277988106,
       "rsi": null,
       "lp_score": 50,
       "apr_rango": null,
-      "vol_tvl": 4.9041666468985765,
+      "vol_tvl": 4.821226927798811,
       "source": "",
       "dex": "PancakeSwap V3",
       "chain": "BSC",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "GYqHjuDzTiw7i52Xv1qohDE6eJr6eSZpsrBVikGZyaFV": {
       "name": "CRCLx/USDC (0.10%)",
@@ -2289,15 +2289,15 @@
     "0xc096da06e8fa70386dedbc5d4d6b2a453b9106f5": {
       "name": "USD₮0/XAUt0 (0.05%)",
       "apr": 11.359417192185882,
-      "fees_day_1k": 0.3090323824811598,
+      "fees_day_1k": 0.3102055379772063,
       "rsi": null,
       "lp_score": 0,
       "apr_rango": null,
-      "vol_tvl": 0.6180647649623197,
+      "vol_tvl": 0.6204110759544126,
       "source": "",
       "dex": "ProjectX",
       "chain": "HyperEVM",
-      "last_seen": "2026-08-07T08:36:27.639164+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "bsc_0xe9b9998b2ec5430d2246c7f1f8d9f298c97d7365": {
       "name": "AAPLB / USDT 0.25%",
@@ -2366,16 +2366,16 @@
     },
     "25bztR81eg6CTvxVm5sJkDcXJavVUZeqHf6kSkbhawoM": {
       "name": "TTWO/USDC (0.25%)",
-      "apr": 89.78025469686085,
-      "fees_day_1k": 2.459733005393448,
+      "apr": 87.06750001010897,
+      "fees_day_1k": 2.3854109591810677,
       "rsi": null,
-      "lp_score": 50,
+      "lp_score": 40,
       "apr_rango": null,
-      "vol_tvl": 0.9836375706145845,
+      "vol_tvl": 0.9539137200808845,
       "source": "",
       "dex": "Raydium",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "bsc_0xec3cfd754eab4e4cccba0a1a1ef38822d78fd448": {
       "name": "Monkey / USDT 1%",
@@ -2405,42 +2405,55 @@
     },
     "5XHY6LqjrD6cULEEjwcDBycG8StMQxgubPKDrUcsKSru": {
       "name": "XMR/USDC (0.01%)",
-      "apr": 23.5448015067353,
-      "fees_day_1k": 0.6450630549790494,
+      "apr": 24.229067979426986,
+      "fees_day_1k": 0.6638100816281366,
       "rsi": null,
       "lp_score": 80,
       "apr_rango": null,
-      "vol_tvl": 6.450293427360861,
+      "vol_tvl": 6.637725805025889,
       "source": "",
       "dex": "Raydium",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "bsc_0xb297d74cbe67ba9a0fa92862c31e501228e8b00b": {
       "name": "GMT / USDT 1%",
-      "apr": 818.710002198874,
-      "fees_day_1k": 22.430411019147233,
+      "apr": 1339.50990988062,
+      "fees_day_1k": 36.69890164056493,
       "rsi": null,
       "lp_score": 40,
       "apr_rango": null,
-      "vol_tvl": 2.2430411019147236,
+      "vol_tvl": 2.3848478924014564,
       "source": "",
       "dex": "PancakeSwap V3",
       "chain": "BSC",
-      "last_seen": "2026-08-07T08:36:27.639164+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     },
     "bF8T7KNJBTGSLJnhpLc6PJ6g3Wr2pW6HGoQUXMjgAiy": {
       "name": "XMR/USDC (0.01%)",
-      "apr": 19.413883184217152,
-      "fees_day_1k": 0.5318872105264972,
+      "apr": 19.901335916550256,
+      "fees_day_1k": 0.5452420799054863,
       "rsi": null,
       "lp_score": 80,
       "apr_rango": null,
-      "vol_tvl": 5.3182907155309564,
+      "vol_tvl": 5.451799394004647,
       "source": "",
       "dex": "Raydium",
       "chain": "Solana",
-      "last_seen": "2026-08-07T10:28:20.925847+00:00"
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
+    },
+    "bsc_0x749e2cff6164f2d1e7545094305b1ef5fcbdeab5": {
+      "name": "GMT / USDT 0.25%",
+      "apr": 1985.8324809878322,
+      "fees_day_1k": 54.40636934213239,
+      "rsi": null,
+      "lp_score": 50,
+      "apr_rango": null,
+      "vol_tvl": 3.714570390084825,
+      "source": "",
+      "dex": "PancakeSwap V3",
+      "chain": "BSC",
+      "last_seen": "2026-08-07T11:15:43.703863+00:00"
     }
   },
   "last_summary_slot": "2026-08-07T08",
@@ -2454,15 +2467,15 @@
     "alerted_pools": {
       "0x12df9913e9e08453440e3c4b1ae73819160b513e": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 396787.7690656738,
-        "last_vol_24h": 851158.7410553278,
+        "last_tvl": 400930.52007160935,
+        "last_vol_24h": 875953.4906619542,
         "alerted_decline": true,
         "name": "WHYPE/USDC (0.1696%)"
       },
       "0x65818645f86f5019680ad79ba7606943d672a5e9": {
         "first_seen": "2026-06-19T20:21:58.951019+00:00",
-        "last_tvl": 956660.6184409241,
-        "last_vol_24h": 266385.13898900896,
+        "last_tvl": 959149.5962405325,
+        "last_vol_24h": 275134.9858829484,
         "alerted_decline": true,
         "name": "WHYPE/USDC (0.1695%)"
       },
@@ -2489,8 +2502,8 @@
       },
       "0xaad2e0b0ff0a4124f2d8e5bb9f0809a79b389bc0": {
         "first_seen": "2026-07-06T13:07:10.842352+00:00",
-        "last_tvl": 337124.68791778304,
-        "last_vol_24h": 92246.0617313539,
+        "last_tvl": 338023.0408804152,
+        "last_vol_24h": 95171.62187182068,
         "alerted_decline": true,
         "name": "WHYPE/USD₮0 (0.1119%)"
       }
