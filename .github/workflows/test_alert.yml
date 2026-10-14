@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}   # one run at a time (no commits)
+  cancel-in-progress: false
 
 jobs:
   test:

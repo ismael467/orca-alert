@@ -626,10 +626,7 @@ def build_new_alert(m: dict) -> str:
                          m.get("apr", 0.0))
     tvl      = m.get("tvl", 0)
     vol_24h  = m.get("vol_24h", 0)
-    fees_24h = m.get("fees_24h", 0)
     apr      = m.get("apr", 0)
-    fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
-    fees_7d  = fees_1k * 7
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     dex        = m.get("dex", "Orca")
@@ -639,19 +636,11 @@ def build_new_alert(m: dict) -> str:
     sym_b      = m.get("symbol_b", "?")
     fee_rate   = m.get("fee_rate") or 0
     fee_str    = f"  {fee_rate * 100:.4g}%" if fee_rate else ""
-    range_line = (
-        "🎯 Suggested range: N/A (bin data not available via current source)\n"
-        if is_meteora else
-        "🎯 Suggested range: N/A\n"
-    )
     apr_fee_note = f" (est. {fee_rate * 100:.2f}% fee)" if is_meteora else ""
     purl, pulab = _pool_url(m)
     return (
         f"🚨 NEW OPPORTUNITY — {dex} | SOL\n"
         f"{sym_a} / {sym_b}{fee_str}\n"
-        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
-        f"{range_line}"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
@@ -676,10 +665,7 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
                          m.get("apr", 0.0))
     tvl      = m.get("tvl", 0)
     vol_24h  = m.get("vol_24h", 0)
-    fees_24h = m.get("fees_24h", 0)
     apr      = m.get("apr", 0)
-    fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
-    fees_7d  = fees_1k * 7
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     dex      = m.get("dex", "Orca")
     addr     = m.get("address", "")
@@ -691,8 +677,6 @@ def build_decline_alert(m: dict, reason: str, prev_tvl: float, prev_vol: float) 
     return (
         f"⚠️ POOL DECLINE — {dex} | SOL\n"
         f"{sym_a} / {sym_b}{fee_str}\n"
-        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)} (prev: {fmt_money(prev_tvl)})\n"

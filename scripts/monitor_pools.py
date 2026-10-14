@@ -282,65 +282,6 @@ def _avg_spike_days(day_volumes: list[float]) -> float | None:
     return (sum(runs) / len(runs)) if runs else None
 
 
-def _range_line(
-    sym_a: str,
-    sym_b: str,
-    price_base: float | None,
-    price_change_24h: float | None,
-    day_volumes: list[float] | None = None,
-    range_hist: dict | None = None,
-    apr: float | None = None,
-) -> str:
-    spike_count   = range_hist["spike_count"]   if range_hist else 0
-    avg_spike_dur = range_hist["avg_spike_dur"] if range_hist else None
-    if avg_spike_dur is None and day_volumes:
-        avg_spike_dur = _avg_spike_days(day_volumes)
-    dur_str = f"{avg_spike_dur:.1f} días" if avg_spike_dur is not None else "N/D"
-
-    low: float | None = None
-    high: float | None = None
-
-    if spike_count >= 3 and range_hist:
-        spike_prices = range_hist["spike_prices"]
-        low  = min(spike_prices) * 0.95
-        high = max(spike_prices) * 1.05
-        if price_change_24h is not None and price_change_24h > 5.0:
-            high *= 1.05
-        elif price_change_24h is not None and price_change_24h < -5.0:
-            low  *= 0.95
-        range_str = f"{_fmt_price(low)} — {_fmt_price(high)} (histórico)"
-    else:
-        base_pct = _range_fallback_pct(sym_a, sym_b)
-        low_pct  = base_pct
-        high_pct = base_pct
-        if price_change_24h is not None and abs(price_change_24h) > 5.0:
-            if price_change_24h > 0:
-                high_pct += 5.0
-            else:
-                low_pct  += 5.0
-        if price_base and price_base > 0:
-            low  = price_base * (1 - low_pct  / 100)
-            high = price_base * (1 + high_pct / 100)
-            pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
-            range_str = f"{_fmt_price(low)} — {_fmt_price(high)} ({pct_str})"
-        else:
-            pct_str   = f"±{base_pct:.0f}%" if low_pct == high_pct else f"-{low_pct:.0f}%/+{high_pct:.0f}%"
-            range_str = pct_str
-
-    apr_line = ""
-    if low and high and price_base and price_base > 0 and apr is not None:
-        ancho = (high - low) / price_base
-        if ancho > 0:
-            apr_rango = apr / ancho
-            apr_rango = min(apr_rango, apr * 3)
-            if apr_rango > 10_000:
-                apr_line = "\n⚠️ APR en rango: >10,000%"
-            else:
-                apr_line = f"\n💰 APR en rango: {apr_rango:,.0f}%"
-
-    return f"📐 Rango sugerido: {range_str} | ⏱ Duración media spike: {dur_str}{apr_line}"
-
-
 def _range_parts(m: dict) -> tuple[str, str, str]:
     """Return (range_str, apr_rango_str, dur_str) for the unified card format."""
     sym_a      = m.get("sym_a", "?")
@@ -482,12 +423,6 @@ def _rsi_line(rsi: float | None) -> str:
     return f"📊 RSI: {v} — 🔴 Evitar (sobrecomprado)"
 
 
-def _fees_day_1k_line(tvl: float, fees_24h: float) -> str:
-    if tvl <= 0:
-        return "💵 Fees/día ($1K): N/D"
-    return f"💵 Fees/día ($1K): ${(1_000 / tvl) * fees_24h:.2f}"
-
-
 def _vol_tvl_line(vol_24h: float, tvl: float) -> str:
     if tvl <= 0:
         return "📊 Vol/TVL: N/D"
@@ -627,7 +562,7 @@ def _build_top3_daily(pool_cache: dict, now_utc: datetime) -> str:
         lines.append(
             f"{medals[i]} {p['name']}{dex_chain}\n"
             f"   APR: {p['apr']:,.0f}% | APR range: {apr_rango_str}\n"
-            f"   Fees/day ($1K): ${p.get('fees_day_1k', 0):.2f} | Vol/TVL: {vol_tvl_str}\n"
+            f"   Vol/TVL: {vol_tvl_str}\n"
             f"   RSI: {rsi_str} | {score_emoji} LP Score: {s}/100"
         )
     body = "\n\n".join(lines) if lines else "No pools detected yet."
@@ -664,10 +599,7 @@ def _build_bluechip_alert(m: dict) -> str:
     source   = m.get("_source", "DEX")
     apr      = m.get("apr", 0)
     vol_24h  = m.get("vol_24h", 0)
-    fees_24h = m.get("fees_24h", 0)
     tvl      = m.get("tvl", 0)
-    fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
-    fees_7d  = fees_1k * 7
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi_val  = m.get("rsi")
@@ -682,8 +614,6 @@ def _build_bluechip_alert(m: dict) -> str:
     return (
         f"🔵 STABLE OPPORTUNITY — {source}\n"
         f"{sym_a} / {sym_b}\n"
-        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
         f"⭐ LP Score: {lp_score}/100 ({_lp_label(lp_score)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
@@ -901,12 +831,9 @@ def _build_new_alert(m: dict, label: str) -> str:
     badge    = "🟢" if m.get("in_top100") else "🟡"
     header   = f"🚨 NEW OPPORTUNITY — {dex} | {chain} {badge}" if chain else f"🚨 NEW OPPORTUNITY — {dex} {badge}"
     vol_24h  = m.get("vol_24h", 0)
-    fees_24h = m.get("fees_24h", 0)
     tvl      = m.get("tvl", 0)
     apr      = m.get("apr", 0)
-    range_str, apr_rango_str, _ = _range_parts(m)
-    fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
-    fees_7d  = fees_1k * 7
+    _, apr_rango_str, _ = _range_parts(m)
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi      = m.get("rsi")
@@ -920,9 +847,6 @@ def _build_new_alert(m: dict, label: str) -> str:
     return (
         f"{header}\n"
         f"{sym_a} / {sym_b}\n"
-        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
-        f"🎯 Suggested range: {range_str}\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"
@@ -1130,12 +1054,9 @@ def _build_pancake_alert(m: dict) -> str:
     chain    = m.get("_chain", "BSC")
     badge    = "🟢" if (m.get("is_btcb") or m.get("is_wbnb")) else "🟡"
     vol_24h  = m.get("vol_24h", 0)
-    fees_24h = m.get("fees_24h", 0)
     tvl      = m.get("tvl", 0)
     apr      = m.get("apr", 0)
-    range_str, apr_rango_str, _ = _range_parts(m)
-    fees_1k  = (1_000 / tvl) * fees_24h if tvl > 0 else 0
-    fees_7d  = fees_1k * 7
+    _, apr_rango_str, _ = _range_parts(m)
     vol_tvl  = vol_24h / tvl if tvl > 0 else 0
     fire     = " 🔥" if vol_tvl > 1 else ""
     rsi      = m.get("rsi")
@@ -1151,9 +1072,6 @@ def _build_pancake_alert(m: dict) -> str:
     return (
         f"🚨 NEW OPPORTUNITY — {dex} | {chain} {badge}\n"
         f"{sym_a} / {sym_b}{fee_str}\n"
-        f"<b>💰 Fees/day in range ($1K): ${fees_1k:.2f}</b>\n"
-        f"<b>📅 Fees/7 days in range ($1K): ${fees_7d:.2f}</b>\n"
-        f"🎯 Suggested range: {range_str}\n"
         f"⭐ LP Score: {lp}/100 ({_lp_label(lp)})\n"
         f"\n"
         f"💧 TVL: {fmt_money(tvl)}\n"

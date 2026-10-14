@@ -9,8 +9,8 @@ permissions:
   contents: write             # needed to commit state_monitor.json
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}   # one run at a time (only writer of state_monitor.json)
+  cancel-in-progress: false
 
 jobs:
   monitor:
